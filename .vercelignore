@@ -1,0 +1,3 @@
+# Local environment files are uploaded only by accident if not ignored here.
+.env*
+**/.env*
