@@ -12,4 +12,4 @@
 
 ## Публикация
 
-Ветка `main` подключена к Vercel и автоматически запускает deployment при каждом новом коммите. Production-сайт: https://airi-airy8.vercel.app/upskill.html
+Ветка `main` подключена к Vercel и автоматически запускает deployment при каждом новом коммите. Production-сайт: https://airi-upskill.vercel.app
