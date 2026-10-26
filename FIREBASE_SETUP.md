@@ -1,6 +1,6 @@
-# Upskill accounts and cloud profiles
+# Upskill Airy accounts and cloud profiles
 
-Upskill uses Firebase Authentication for email/password accounts and Cloud Firestore for per-user profiles and diary entries. A profile contains the user's nickname and progress settings; diary entries live in that user's `proofs` subcollection. The account dialog supports sign-in, sign-up with a nickname, email verification, password reset, sign-out, and explicit import of local data.
+Upskill Airy uses Firebase Authentication for email/password accounts and Cloud Firestore for per-user profiles and diary entries. A profile contains the user's nickname and progress settings; diary entries live in that user's `proofs` subcollection. The account dialog supports sign-in, sign-up with a nickname, email verification, password reset, sign-out, and explicit import of local data.
 
 The website itself is hosted on Vercel. Firebase App Hosting is not required and would require the paid Blaze plan. Firebase Authentication (email/password) and one default Firestore database can be used on the no-cost Spark plan within its quotas.
 
@@ -8,7 +8,7 @@ The website itself is hosted on Vercel. Firebase App Hosting is not required and
 
 1. Open the existing Firebase project and its registered **Web app**. Do not create a second project or enable Firebase App Hosting.
 2. In **Authentication → Sign-in method**, enable **Email/Password**.
-3. In **Authentication → Settings → Authorized domains**, include `localhost` for local development and the public Upskill domain. Extra aliases may be needed for email action links or redirect-based providers.
+3. In **Authentication → Settings → Authorized domains**, include `localhost` for local development and the public Upskill Airy Airy domain. Extra aliases may be needed for email action links or redirect-based providers.
 4. Open **Firestore Database**. If no database exists, create the default database on the Spark plan. In its **Rules** tab, publish the contents of this repository's `firestore.rules` file before users start saving data; the rules restrict each account to its own UID path.
 5. Put the Web app configuration values into the local `.env.local` and Vercel's Production environment using these names:
 

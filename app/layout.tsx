@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Upskill — дневник роста",
-  description: "Визуальный дневник навыков с древом прогресса, заданиями и диалогами.",
+  title: "Upskill Airy — твой путь к росту",
+  description: "Личный дневник навыков с Микой: практика, дерево прогресса и достижения.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

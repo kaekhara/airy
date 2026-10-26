@@ -4,7 +4,7 @@ export default function Home() {
       <iframe
         className="experience-frame"
         src="/upskill.html"
-        title="Upskill — дневник навыков и визуальная новелла"
+        title="Upskill Airy — дневник навыков и Мика"
       />
     </main>
   );
