@@ -1187,7 +1187,7 @@ document.addEventListener('animationend',e=>{if(e.target instanceof HTMLButtonEl
 const scene={queue:[],cur:null,typing:false,timer:null,full:'',waiting:false,instant:false};
 const fmt=t=>String(t).replace(/\{name\}/g,(store.profile&&store.profile.name)||'друг').replace(/\(ась\)/g,'').replace(/\(а\)/g,'');
 const EXPRS=['idle','happy','proud','surprised','think','sleepy','cool','crazy','mischievous','tease'];
-const MIKA_SPRITES={idle:'neon/cool',happy:'neon/joy',proud:'neon/proud',surprised:'neon/shock',think:'neon/think',sleepy:'neon/sleepy',cool:'neon/tsundere',crazy:'neon/crazy',mischievous:'neon/tease',tease:'neon/angry'};
+const MIKA_SPRITES={idle:'neon/cool',happy:'neon/joy',proud:'neon/support',surprised:'neon/shock',think:'neon/think',sleepy:'neon/sleepy',cool:'neon/proud',crazy:'neon/crazy',mischievous:'neon/tease',tease:'neon/tsundere'};
 const EXPR_SCALE={idle:1,happy:1,proud:1,surprised:1,think:1,sleepy:1,cool:1,crazy:1,mischievous:1,tease:1};
 const mikaPreloaded=Object.fromEntries([...new Set(Object.values(MIKA_SPRITES))].map(name=>{const image=new Image();image.src='images/mika/'+name+'.png';return[name,image]}));
 let curExpr='idle',spriteRequest=0;
@@ -1219,7 +1219,7 @@ function finishTyping(){stopTyping();$('#line').textContent=scene.full;typed();}
 function typed(){
   const l=scene.cur||{};
   if(l.choices){showChoices(l.choices);return;}
-  if(l.ask){const a=$('#ask');$('#askIn').placeholder=l.ask.placeholder||'';$('#askIn').maxLength=l.ask.max||24;$('#askIn').value=l.ask.prefill||'';$('#newChat').hidden=!(l.ask.chat&&mikaHistory.length);a.hidden=false;if(l.menu)showMenu();else measure();setTimeout(()=>{if(activeTab==='novel')$('#askIn').focus();},30);return;}
+  if(l.ask){const a=$('#ask');$('#askIn').placeholder=l.ask.placeholder||'';$('#askIn').maxLength=l.ask.max||24;$('#askIn').value=l.ask.prefill||'';$('#newChat').hidden=!(l.ask.chat&&mikaHistory.length);a.hidden=false;if(l.menu)showMenu();else measure();setTimeout(()=>{if(activeTab==='novel'&&!matchMedia('(pointer: coarse)').matches)$('#askIn').focus({preventScroll:true});},30);return;}
   if(scene.queue.length){scene.waiting=true;$('#more').hidden=false;}else{showMenu();}
 }
 function advance(){if(scene.typing){finishTyping();return;}if(scene.waiting)next();}
@@ -1935,7 +1935,9 @@ function applyMikaArt(){
 .choice{color:#f5f0ff!important;-webkit-text-fill-color:#f5f0ff;background:rgba(10,12,34,.985);border-color:rgba(173,153,255,.45);box-shadow:0 6px 18px rgba(2,3,17,.38)}
 .choice.primary{background:linear-gradient(110deg,#fa4bd5,#a85cff);color:#21091f!important;-webkit-text-fill-color:#21091f;border-color:#f780eb}
 .dialog{background:rgba(9,11,31,.99)}
+.ask input{background:rgba(9,11,31,.99)!important;color:#f5f0ff!important;-webkit-text-fill-color:#f5f0ff}
 .char{bottom:calc(var(--ui-h,180px) + 12px)!important;width:min(340px,64vw,max(100px,calc((var(--stage-h,640px) - var(--ui-h,180px) - 36px)/1.375)))!important;min-width:0!important}
+.char .mika{-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 89%,rgba(0,0,0,.76) 94%,transparent 100%);mask-image:linear-gradient(180deg,#000 0%,#000 89%,rgba(0,0,0,.76) 94%,transparent 100%)}
 @media(prefers-reduced-motion:reduce){.home-hero,.stage{scroll-behavior:auto}}
 </style>
 
