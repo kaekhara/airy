@@ -628,6 +628,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
     <div class="top-actions">
       <div class="streak" data-streak-tier="seed" title="Серия активности: 0 дней" aria-label="Серия активности: 0 дней"><svg class="sakura-streak" viewBox="0 0 24 24" aria-hidden="true"><path class="sakura-petals" d="M12 2.5c1.45 0 2.35 2.03 2.3 4.15 1.57-1.42 3.75-2.13 4.78-1.1s.32 3.21-1.1 4.78c2.12-.05 4.15.85 4.15 2.3s-2.03 2.35-4.15 2.3c1.42 1.57 2.13 3.75 1.1 4.78s-3.21.32-4.78-1.1c.05 2.12-.85 4.15-2.3 4.15s-2.35-2.03-2.3-4.15c-1.57 1.42-3.75 2.13-4.78 1.1s-.32-3.21 1.1-4.78C3.9 14.98 1.87 14.08 1.87 12.63s2.03-2.35 4.15-2.3c-1.42-1.57-2.13-3.75-1.1-4.78s3.21-.32 4.78 1.1C9.65 4.53 10.55 2.5 12 2.5Z"/><circle class="sakura-core" cx="12" cy="12.5" r="2.1"/></svg><b id="streakNum">0</b><span>дн.</span></div>
       <button class="account-toggle" id="accountToggle" type="button" aria-label="Аккаунт"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.6-3.6 3-5.5 7-5.5s6.4 1.9 7 5.5"/></svg><span id="accountLabel">Войти</span></button>
+      <button class="settings-toggle" id="settingsToggle" type="button" aria-label="Настройки" title="Настройки"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a8 8 0 0 0 0-6l1.5-1.2-1.5-2.6-1.8.7a8 8 0 0 0-5.2-1.5L12 2.5H9l-.4 1.9a8 8 0 0 0-5.2 1.5l-1.8-.7-1.5 2.6L1.6 9a8 8 0 0 0 0 6l-1.5 1.2 1.5 2.6 1.8-.7a8 8 0 0 0 5.2 1.5l.4 1.9h3l.4-1.9a8 8 0 0 0 5.2-1.5l1.8.7 1.5-2.6z" transform="translate(1.5 0) scale(.9)"/></svg></button>
       <button class="music-toggle theme-toggle" id="themeToggle" type="button" aria-label="Переключить на дневной фон" title="Переключить на дневной фон" aria-pressed="false"><svg id="themeIcon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg><span id="themeLabel">День</span></button>
       <button class="music-toggle" id="musicToggle" type="button" aria-label="Включить музыку" aria-pressed="false" title="Включить музыку">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span id="musicLabel">Музыка</span>
@@ -654,8 +655,11 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
       <div class="orb" aria-hidden="true"></div>
       <svg id="skyline" viewBox="0 0 400 120" preserveAspectRatio="xMidYMax slice" aria-hidden="true"></svg>
       <canvas id="petals" aria-hidden="true"></canvas>
+      <div class="char-back" aria-hidden="true">
+        <img class="mika-back" id="mikaBack" alt="" draggable="false" style="visibility:hidden;opacity:0">
+      </div>
       <div class="char" aria-hidden="true">
-        <img class="mika" id="mika" data-expr="idle" src="images/mika/smile.png" alt="" draggable="false">
+        <img class="mika" id="mika" data-expr="idle" alt="" draggable="false" style="visibility:hidden;opacity:0">
       </div>
       <div class="fx" id="fx" hidden><b id="fxT">LEVEL UP</b><span id="fxS"></span></div>
       <div class="ui" id="ui">
@@ -748,18 +752,21 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
       <p class="note" id="pfMode" role="status"></p>
       <p class="note" id="pfFeedback" role="status" aria-live="polite"></p>
     </div>
-    <div class="panel profile" id="hiddenSkillPanel">
-      <h3 style="font-size:15px">Скрытые навыки</h3>
-      <p class="note">Восстанови ветку, если передумала её удалять.</p>
-      <div id="hiddenSkills"></div>
-    </div>
     <div class="panel profile" id="portraitPanel">
-      <h3 style="font-size:15px">Иллюстрация Мики</h3>
-      <p class="note" style="margin-top:6px">Загрузи собственную иллюстрацию PNG, JPG или WebP. Она будет показана для радостной эмоции; остальные выражения будут переключаться отдельно. Изображение автоматически уменьшится и сохранится в профиле.</p>
-      <div class="portrait-preview" id="portraitPreview"><span class="note">Предпросмотр портрета</span></div>
-      <label for="portraitFile">Изображение персонажа</label><input type="file" id="portraitFile" accept="image/png,image/jpeg,image/webp">
-      <p class="err" id="portraitErr" role="alert"></p>
-      <button type="button" class="btn danger" id="portraitReset">Вернуть стандартный портрет</button>
+      <h3 style="font-size:15px">Версия Мики</h3>
+      <p class="note" style="margin-top:6px">Выбери набор иллюстраций. Выбор сохранится в твоём профиле.</p>
+      <div class="mika-version-options" id="mikaVersionOptions" role="group" aria-label="Версия иллюстраций Мики">
+        <button class="mika-version-option" type="button" data-mika-version="old" aria-pressed="false">
+          <img src="images/mika/smile.png?v=20261027g" alt="" loading="lazy">
+          <span><b>Старая версия</b><small>Прежний стиль персонажа</small></span>
+          <i aria-hidden="true">✓</i>
+        </button>
+        <button class="mika-version-option" type="button" data-mika-version="new" aria-pressed="true">
+          <img src="images/mika/versions/new/regular.png?v=20261027h" alt="" loading="lazy">
+          <span><b>Новая версия</b><small>Обновлённый набор эмоций</small></span>
+          <i aria-hidden="true">✓</i>
+        </button>
+      </div>
     </div>
 
   </section>
@@ -865,6 +872,19 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
       <div class="account-actions"><button class="btn primary" id="accountCloseIn" type="button">Продолжить</button><button class="btn" id="accountImport" type="button">Перенести локальные данные</button><button class="btn danger" id="accountLogout" type="button">Выйти из аккаунта</button></div>
     </div>
     <button class="account-cancel" id="accountClose" type="button">Закрыть</button>
+  </section>
+</div>
+<div class="overlay" id="settingsOverlay" hidden>
+  <section class="sheet settings-sheet" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
+    <button class="account-close" id="settingsClose" type="button" aria-label="Закрыть настройки">×</button>
+    <span class="account-mark settings-mark" aria-hidden="true">⚙</span>
+    <h2 id="settingsTitle">Настройки</h2>
+    <p class="sub">Управление данными и архивом навыков.</p>
+    <section class="settings-section" aria-labelledby="skillArchiveTitle">
+      <div class="settings-section-head"><div><h3 id="skillArchiveTitle">Архив навыков</h3><p>Удалённые навыки скрыты из древа, но их записи и прогресс сохранены.</p></div><span id="archiveCount" class="archive-count">0</span></div>
+      <div id="skillArchive" class="skill-archive" aria-live="polite"></div>
+    </section>
+    <button class="btn settings-done" id="settingsDone" type="button">Готово</button>
   </section>
 </div>
 <div class="toast" id="toast" hidden role="status"></div>
@@ -1110,7 +1130,7 @@ $('#musicToggle').addEventListener('click',toggleMusic);
 function onData(){renderAll();}
 function renderAll(){
   buildTree();S=computeStats(store.proofs);
-  renderHud();renderDashboard();renderTree();renderJournal();renderAwards();renderProfile();
+  renderHud();renderDashboard();renderTree();renderJournal();renderAwards();renderProfile();renderSkillArchive();
   applyMikaArt();
   if($('#ciOverlay').hidden)fillSkillSelect();
 }
@@ -1186,13 +1206,37 @@ document.addEventListener('animationend',e=>{if(e.target instanceof HTMLButtonEl
 /* ---------- Mika dialogue engine ---------- */
 const scene={queue:[],cur:null,typing:false,timer:null,full:'',waiting:false,instant:false};
 const fmt=t=>String(t).replace(/\{name\}/g,(store.profile&&store.profile.name)||'друг').replace(/\(ась\)/g,'').replace(/\(а\)/g,'');
-const EXPRS=['idle','happy','proud','surprised','think','sleepy','cool','crazy','mischievous','tease'];
-const MIKA_SPRITES={idle:'neon/cool',happy:'neon/joy',proud:'neon/support',surprised:'neon/shock',think:'neon/think',sleepy:'neon/sleepy',cool:'neon/proud',crazy:'neon/crazy',mischievous:'neon/tease',tease:'neon/tsundere'};
-const EXPR_SCALE={idle:1,happy:1,proud:1,surprised:1,think:1,sleepy:1,cool:1,crazy:1,mischievous:1,tease:1};
-const mikaPreloaded=Object.fromEntries([...new Set(Object.values(MIKA_SPRITES))].map(name=>{const image=new Image();image.src='images/mika/'+name+'.png';return[name,image]}));
-let curExpr='idle',spriteRequest=0;
-function setExpr(e){curExpr=EXPRS.includes(e)?e:'think';const m=$('#mika'),holder=$('.char');holder?.setAttribute('data-expression',curExpr);if(m){const request=++spriteRequest;m.setAttribute('data-expr',curExpr);const sprite=MIKA_SPRITES[curExpr]||'smile';m.style.setProperty('--expr-scale',String(EXPR_SCALE[curExpr]||1));m.style.setProperty('--expr-shift','0px');m.style.setProperty('--expr-tilt',curExpr==='cool'?'-1deg':'0deg');const next='images/mika/'+sprite+'.png';if(m.getAttribute('src')!==next){const image=mikaPreloaded[sprite];const swap=()=>{if(request===spriteRequest)m.setAttribute('src',next);};if(image&&image.complete&&image.naturalWidth>0)swap();else{image?.addEventListener('load',swap,{once:true});setTimeout(swap,200);}}}}
-function inferMikaExpression(text){const value=String(text||'').toLocaleLowerCase('ru-RU');if(/снова ты за своё|опять ты со своими|ну конечно,? ты|закатываю глаза|даже этого не можешь|раз сам не можешь|хватит ли у тебя сил|не задирай нос|не отвлекай меня|дурач|сам не можешь определиться|хотя бы на что-то стоящее/.test(value))return'tease';if(/я же говорила|видишь,? я|как я и сказала|так и знала|горжусь|не зря я в тебя верила|я знала,? что ты справишься/.test(value))return'proud';if(/ничего себе|неожидан|правда\?|серьёзно\?|вот это поворот|вот это да/.test(value))return'surprised';if(/секрет|между нами|шалост|заговор/.test(value))return'mischievous';if(/устал|сонн|пора спать|поздняя ночь/.test(value))return'sleepy';if(/ура|поздравля|молодец|круто|отлично|здорово|получилось|рада за тебя/.test(value))return'happy';if(/безум|невероятно|гениальн|!!!/.test(value))return'crazy';if(/хм|думаю|кажется|возможно|не уверен|разбер|интересно|\?$/.test(value))return'think';if(/ладно|спокойно|пожалуй|ну что ж/.test(value))return'cool';return null;}
+const EXPRS=['idle','happy','proud','surprised','think','sleepy','cool','crazy','mischievous','tease','angry','sad','worried','shy','embarrassed','tender'];
+const MIKA_SPRITES={
+  old:{idle:'smile',happy:'joy',proud:'support',surprised:'shock',think:'sad',sleepy:'sad',cool:'smile',crazy:'crazy',mischievous:'mischievous',tease:'tease',angry:'tsundere',sad:'sad',worried:'sad',shy:'tease',embarrassed:'tease',tender:'support'},
+  new:{idle:'versions/new/regular',happy:'versions/new/happy',proud:'versions/new/energetic',surprised:'versions/new/surprised',think:'versions/new/modest',sleepy:'versions/new/sleepy',cool:'versions/new/regular',crazy:'versions/new/energetic',mischievous:'versions/new/flirty',tease:'versions/new/flirty',angry:'versions/new/aggressive',sad:'versions/new/sad-curled',worried:'versions/new/sad-tear',shy:'versions/new/shy',embarrassed:'versions/new/embarrassed',tender:'versions/new/shy-close'}
+};
+const EXPR_SCALE={idle:1,happy:1,proud:1,surprised:1,think:1,sleepy:1,cool:1,crazy:1,mischievous:1,tease:1,angry:1,sad:1,worried:1,shy:1,embarrassed:1,tender:1};
+const mikaPreloaded=new Map();
+let curExpr='idle',spriteRequest=0,mikaProfileReady=false;
+function currentMikaVersion(){return store.profile&&store.profile.mikaVersion==='old'?'old':'new';}
+function getMikaSprite(sprite){if(!mikaPreloaded.has(sprite)){const image=new Image();image.src='images/mika/'+sprite+'.png?v=20261027h';mikaPreloaded.set(sprite,image);}return mikaPreloaded.get(sprite);}
+function setExpr(e){
+  curExpr=EXPRS.includes(e)?e:'think';
+  const m=$('#mika'),back=$('#mikaBack'),holder=$('.char'),stage=$('#stage');
+  holder?.setAttribute('data-expression',curExpr);
+  if(!m||!back||!stage)return;
+  const request=++spriteRequest,version=currentMikaVersion(),sprite=(MIKA_SPRITES[version]&&MIKA_SPRITES[version][curExpr])||MIKA_SPRITES.new.idle;
+  const next='images/mika/'+sprite+'.png?v=20261027h';
+  m.setAttribute('data-expr',curExpr);
+  for(const part of [m,back]){part.style.setProperty('--expr-scale',String(EXPR_SCALE[curExpr]||1));part.style.setProperty('--expr-shift','0px');part.style.setProperty('--expr-tilt',curExpr==='cool'?'-1deg':'0deg');}
+  const image=getMikaSprite(sprite);
+  const swap=()=>{
+    if(request!==spriteRequest||!mikaProfileReady||!image.naturalWidth)return;
+    m.src=next;
+    if(version==='new'){back.src=next;back.classList.add('sprite-ready');back.style.visibility='visible';back.style.opacity='1';}
+    else{back.classList.remove('sprite-ready');back.style.visibility='hidden';back.style.opacity='0';back.removeAttribute('src');}
+    stage.dataset.spriteVersion=version;
+    m.classList.add('sprite-ready');m.style.visibility='visible';m.style.opacity='1';
+  };
+  if(image.complete)swap();else image.addEventListener('load',swap,{once:true});
+}
+function inferMikaExpression(text){const value=String(text||'').toLocaleLowerCase('ru-RU');if(/злюсь|разозли|сердит|хватит!|прекрати|бесишь|как ты смеешь/.test(value))return'angry';if(/снова ты за своё|опять ты со своими|ну конечно,? ты|закатываю глаза|не задирай нос|подкол|поддразн/.test(value))return'tease';if(/я же говорила|видишь,? я|как я и сказала|так и знала|горжусь|не зря я в тебя верила/.test(value))return'proud';if(/ничего себе|неожидан|правда\?|серьёзно\?|вот это поворот|вот это да/.test(value))return'surprised';if(/смуща|краснею|не смотри так|д-дурак|засмуща/.test(value))return'embarrassed';if(/груст|печал|хочется плакать|слёз|слез/.test(value))return'sad';if(/тревож|волнуюсь|боюсь|страшно|переживаю/.test(value))return'worried';if(/нежно|побереги себя|я рядом|береги себя|ты устал|тебе тяжело/.test(value))return'tender';if(/застесня|стесня|робко/.test(value))return'shy';if(/секрет|между нами|шалост|заговор/.test(value))return'mischievous';if(/я устала|сама устала|хочу спать|сонн|зеваю|зевнула/.test(value))return'sleepy';if(/ура|поздравля|молодец|круто|отлично|здорово|получилось|рада за тебя/.test(value))return'happy';if(/безум|невероятно|гениальн|!!!/.test(value))return'crazy';if(/хм|думаю|кажется|возможно|не уверен|разбер|интересно/.test(value))return'think';if(/ладно|спокойно|пожалуй|ну что ж/.test(value))return'cool';return null;}
 function measure(){
   requestAnimationFrame(()=>{const st=$('#stage');if(!st)return;
     st.style.setProperty('--ui-h',$('#ui').offsetHeight+'px');st.style.setProperty('--stage-h',st.offsetHeight+'px');});
@@ -1772,16 +1816,17 @@ function renderProfile(){
     ?'Прогресс, ник и записи привязаны к твоему аккаунту. После входа они появятся на других устройствах.'
     :'Сейчас данные хранятся в этом браузере. Войди или создай аккаунт, чтобы синхронизировать их между устройствами.';
   $('#pfExport').hidden=!store.downloads;
-  const hiddenIds=new Set((store.profile&&store.profile.hiddenSkills)||[]),names={};
-  const edits=(store.profile&&store.profile.skillEdits)||{};
-  BASE.forEach(b=>{names[b.id]=(edits[b.id]&&edits[b.id].name)||b.name;b.leaves.forEach(l=>{names[l.id]=(edits[l.id]&&edits[l.id].name)||l.name;});});
-  ((store.profile&&store.profile.customBranches)||[]).forEach(b=>{names[b.id]=(edits[b.id]&&edits[b.id].name)||b.name;});
-  ((store.profile&&store.profile.customLeaves)||[]).forEach(l=>{names[l.id]=(edits[l.id]&&edits[l.id].name)||l.name;});
-  const hidden=Array.from(hiddenIds).filter(id=>names[id]);
-  $('#hiddenSkillPanel').hidden=!hidden.length;
-  $('#hiddenSkills').innerHTML=hidden.map(id=>'<div class="hidden-skill-row"><span>'+esc(names[id])+'</span><button type="button" class="btn small" data-restore-skill="'+esc(id)+'">Вернуть в древо</button></div>').join('');
-  const portrait=(store.profile&&store.profile.customPortrait)||'',preview=$('#portraitPreview');
-  preview.innerHTML=portrait?'<img src="'+esc(portrait)+'" alt="Предпросмотр иллюстрации Мики">':'<span class="note">Предпросмотр портрета</span>';
+  const selectedVersion=profile.mikaVersion==='old'?'old':'new';
+  $$('#mikaVersionOptions [data-mika-version]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mikaVersion===selectedVersion)));
+}
+function renderSkillArchive(){
+  const hiddenIds=new Set((store.profile&&store.profile.hiddenSkills)||[]),edits=(store.profile&&store.profile.skillEdits)||{},names={};
+  BASE.forEach(branch=>{names[branch.id]=(edits[branch.id]&&edits[branch.id].name)||branch.name;branch.leaves.forEach(skill=>{names[skill.id]=(edits[skill.id]&&edits[skill.id].name)||skill.name;});});
+  ((store.profile&&store.profile.customBranches)||[]).forEach(branch=>{names[branch.id]=(edits[branch.id]&&edits[branch.id].name)||branch.name;});
+  ((store.profile&&store.profile.customLeaves)||[]).forEach(skill=>{names[skill.id]=(edits[skill.id]&&edits[skill.id].name)||skill.name;});
+  const hidden=Array.from(hiddenIds).filter(id=>names[id]),root=$('#skillArchive');
+  $('#archiveCount').textContent=String(hidden.length);
+  root.innerHTML=hidden.length?hidden.map(id=>'<div class="archive-skill-row"><span>'+esc(names[id])+'</span><button type="button" class="btn small" data-restore-skill="'+esc(id)+'">Восстановить</button></div>').join(''):'<p class="archive-empty">Архив пуст. Удалённые навыки будут храниться здесь.</p>';
 }
 function renderProfileCalendar(stats){
   const today=new Date();today.setHours(12,0,0,0);
@@ -1798,13 +1843,19 @@ function renderProfileCalendar(stats){
   $('#profileCalendar').innerHTML=html;
   $('#profileCalendarSummary').textContent=`Последние 35 дней · ${activeDays} ${activeWord(activeDays)} · серия ${stats.streak} ${dayWord(stats.streak)}`;
 }
-$('#hiddenSkills').addEventListener('click',async e=>{
+$('#skillArchive').addEventListener('click',async e=>{
   const b=e.target.closest('[data-restore-skill]');if(!b)return;
   const id=b.dataset.restoreSkill,branch=BASE.find(x=>x.id===id)||((store.profile.customBranches||[]).find(x=>x.id===id));
   const ids=[id];if(branch){(branch.leaves||[]).forEach(l=>ids.push(l.id));(store.profile.customLeaves||[]).filter(l=>l.branch===id).forEach(l=>ids.push(l.id));}
   const hidden=(store.profile.hiddenSkills||[]).filter(x=>!ids.includes(x));
-  try{await store.saveProfile({hiddenSkills:hidden});toast('Навык возвращён в древо.');}catch(err){toast('Не удалось восстановить навык.');}
+  try{await store.saveProfile({hiddenSkills:hidden});store.profile=Object.assign({},store.profile,{hiddenSkills:hidden});renderAll();toast('Навык возвращён в древо.');}catch(err){toast('Не удалось восстановить навык.');}
 });
+let settingsReturnFocus=null;
+function closeSettings(){const overlay=$('#settingsOverlay');overlay.hidden=true;if(settingsReturnFocus&&settingsReturnFocus.focus)settingsReturnFocus.focus();}
+$('#settingsToggle').addEventListener('click',()=>{settingsReturnFocus=document.activeElement;renderSkillArchive();$('#settingsOverlay').hidden=false;$('#settingsClose').focus({preventScroll:true});});
+$('#settingsClose').addEventListener('click',closeSettings);$('#settingsDone').addEventListener('click',closeSettings);
+$('#settingsOverlay').addEventListener('click',e=>{if(e.target.id==='settingsOverlay')closeSettings();});
+document.addEventListener('keydown',e=>{const overlay=$('#settingsOverlay');if(overlay.hidden)return;if(e.key==='Escape'){closeSettings();return;}if(e.key==='Tab'){const focusables=$$('button:not([disabled])',overlay).filter(x=>!x.hidden&&x.offsetParent!==null);if(!focusables.length)return;const first=focusables[0],last=focusables[focusables.length-1];if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}});
 $('#profileAccount').addEventListener('click',()=>{$('#accountToggle').click();});
 $('#pfSave').addEventListener('click',async()=>{
   const v=$('#pfName').value.trim().replace(/\s+/g,' ').slice(0,24),b=$('#pfSave');$('#pfFeedback').textContent='';
@@ -1864,33 +1915,23 @@ const petals={cv:null,ctx:null,list:[],raf:0,run:false,
 document.addEventListener('visibilitychange',()=>{if(document.hidden)petals.stop();else if(activeTab==='novel')petals.start();});
 if(window.ResizeObserver){new ResizeObserver(()=>{petals.size();measure();}).observe($('#stage'));}
 
-/* ---------- expression sprites and optional portrait ---------- */
+/* ---------- expression sprites and profile version selector ---------- */
 const MIKA_SPRITE_DEFAULT=$('#mika').outerHTML;
 function applyMikaArt(){
   const holder=$('.char');if(!holder)return;
   let cv=holder.querySelector('#mika');
   if(!cv){holder.innerHTML=MIKA_SPRITE_DEFAULT;cv=holder.querySelector('#mika');}
-  const portrait=(store.profile&&store.profile.customPortrait)||'';
-  let img=holder.querySelector('.portrait-render');
-  if(portrait){if(!img){img=document.createElement('img');img.className='portrait-render';img.alt='Мика, участница литературного клуба';holder.appendChild(img);}if(img.src!==portrait)img.src=portrait;holder.classList.add('has-portrait');}
-  else{holder.classList.remove('has-portrait');if(img)img.remove();}
   if(cv)setExpr(curExpr);
 }
-(function(){
-  $('#portraitFile').addEventListener('change',e=>{
-    const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
-    if(!/^image\/(png|jpeg|webp)$/.test(f.type)){$('#portraitErr').textContent='Выбери PNG, JPG или WebP.';return;}
-    if(f.size>10000000){$('#portraitErr').textContent='Файл слишком большой. Максимум 10 МБ.';return;}
-    const reader=new FileReader();reader.onerror=()=>{$('#portraitErr').textContent='Не удалось прочитать файл.';};
-    reader.onload=()=>{const image=new Image();image.onerror=()=>{$('#portraitErr').textContent='Файл изображения не удалось открыть.';};image.onload=async()=>{
-      const scale=Math.min(1,900/Math.max(image.naturalWidth,image.naturalHeight)),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
-      canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);let data=canvas.toDataURL('image/webp',.9);if(!data.startsWith('data:image/webp'))data=canvas.toDataURL('image/png');
-      try{await store.saveProfile({customPortrait:data,customSvg:''});applyMikaArt();renderProfile();$('#portraitErr').textContent='';toast('Иллюстрация Мики обновлена.');}
-      catch(err){$('#portraitErr').textContent='Не удалось сохранить. Попробуй изображение поменьше.';}
-    };image.src=String(reader.result||'');};reader.readAsDataURL(f);
-  });
-  $('#portraitReset').addEventListener('click',async()=>{try{await store.saveProfile({customPortrait:'',customSvg:''});applyMikaArt();renderProfile();toast('Иллюстрация Мики восстановлена.');}catch(e){$('#portraitErr').textContent='Не удалось сбросить портрет.';}});
-})();
+$('#mikaVersionOptions').addEventListener('click',async e=>{
+  const button=e.target instanceof Element?e.target.closest('[data-mika-version]'):null;
+  if(!button)return;
+  const version=button.dataset.mikaVersion;
+  if(version!=='old'&&version!=='new')return;
+  if(version===currentMikaVersion())return;
+  try{await store.saveProfile({mikaVersion:version});store.profile=Object.assign({},store.profile,{mikaVersion:version});applyMikaArt();renderProfile();toast(version==='old'?'Старая версия Мики выбрана.':'Новая версия Мики выбрана.');}
+  catch(error){toast('Не удалось сохранить версию Мики. Попробуй ещё раз.');}
+});
 
 /* ---------- start ---------- */
 (async function boot(){
@@ -1899,6 +1940,7 @@ function applyMikaArt(){
   setExpr('idle');$('#line').textContent='';$('#dialog').classList.add('is-empty');
   try{window.UPSKILL_FIREBASE_CONFIG=await window.UPSKILL_FIREBASE_CONFIG_PROMISE;}catch(e){window.UPSKILL_FIREBASE_CONFIG=null;}
   await initStore();
+  mikaProfileReady=true;
   renderAll();
   const tab=(location.hash||'').replace('#','');
   show(['novel','tree','journal','ach'].indexOf(tab)>=0?tab:'novel',true);
@@ -1932,12 +1974,46 @@ function applyMikaArt(){
 .btn.primary:hover,.home-actions .primary:hover{background:linear-gradient(110deg,#ff71e1,#bd78ff)}
 #scenePanel{scroll-margin-block:22px}
 .choice,.dialog{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.settings-toggle{display:grid;place-items:center;flex:none;width:40px;height:40px;padding:8px;border:1px solid var(--line);border-radius:var(--leaf);background:var(--card);color:var(--muted);transition:color .18s ease,border-color .18s ease,background .18s ease,transform .18s ease}
+.settings-toggle:hover{color:var(--ink);border-color:rgba(232,121,231,.65);background:rgba(190,87,199,.12);transform:rotate(18deg)}
+.settings-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.settings-sheet{position:relative;padding-top:28px}
+.settings-sheet h2{margin-top:8px}.settings-mark{display:grid;place-items:center;font-style:normal}
+.settings-section{margin-top:22px;padding:16px;border:1px solid var(--line);border-radius:16px;background:rgba(0,0,0,.1)}
+.settings-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
+.settings-section-head h3{font-size:15px}.settings-section-head p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.archive-count{display:grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:50%;background:rgba(225,93,211,.14);color:#ed9bea;font-weight:800}
+.skill-archive{display:grid;gap:8px}.archive-skill-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}.archive-skill-row>span{min-width:0;overflow-wrap:anywhere}
+.archive-empty{margin:0;padding:12px;color:var(--muted);font-size:13px}.settings-done{width:100%;margin-top:16px}
+body[data-theme-mode="day"] .settings-section{background:rgba(65,48,77,.035)}body[data-theme-mode="day"] .archive-skill-row{background:#fff}body[data-theme-mode="day"] .settings-section-head p,body[data-theme-mode="day"] .archive-empty{color:#5f5969}
+@media(max-width:520px){.top-actions{gap:5px}.settings-toggle,.music-toggle,.account-toggle{width:36px;height:36px;min-height:36px;padding:7px}.settings-toggle svg{width:18px;height:18px}.settings-sheet{padding:24px 18px 18px}.settings-section{padding:12px}.archive-skill-row{align-items:flex-start;flex-wrap:wrap}}
+.char .mika:not(.sprite-ready){visibility:hidden;opacity:0;animation:none!important}
+.char .mika.sprite-ready{visibility:visible;opacity:1;transition:opacity .18s ease}
+.char .mika.sprite-ready{visibility:visible;opacity:1}
+.mika-version-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:14px}
+.mika-version-option{position:relative;display:grid;grid-template-columns:94px minmax(0,1fr) 24px;align-items:center;gap:14px;min-width:0;padding:10px 14px;border:1px solid var(--line);border-radius:18px;background:var(--surface-2,rgba(20,16,39,.72));color:var(--ink);text-align:left;cursor:pointer;transition:border-color .18s ease,background .18s ease,transform .18s ease,box-shadow .18s ease}
+.mika-version-option:hover{transform:translateY(-2px);border-color:#e879e7;box-shadow:0 8px 24px rgba(167,84,237,.16)}
+.mika-version-option[aria-pressed="true"]{border-color:#e879e7;background:linear-gradient(120deg,rgba(220,73,204,.16),rgba(106,96,241,.14));box-shadow:inset 0 0 0 1px rgba(232,121,231,.26),0 8px 24px rgba(167,84,237,.12)}
+.mika-version-option img{width:94px;height:116px;object-fit:contain;object-position:center bottom;border-radius:12px;background:radial-gradient(ellipse at 50% 70%,rgba(122,68,155,.24),transparent 72%)}
+.mika-version-option span{display:grid;gap:5px;min-width:0}
+.mika-version-option b{font-size:14px}.mika-version-option small{color:var(--muted);font-size:12px;line-height:1.4}
+.mika-version-option i{display:grid;place-items:center;width:22px;height:22px;border:1px solid var(--line);border-radius:50%;color:transparent;font-style:normal;font-size:13px}
+.mika-version-option[aria-pressed="true"] i{border-color:#f18add;background:linear-gradient(140deg,#f064d5,#8e68f3);color:#1c1028}
+@media(max-width:680px){.mika-version-options{grid-template-columns:1fr}.mika-version-option{grid-template-columns:82px minmax(0,1fr) 24px}.mika-version-option img{width:82px;height:102px}}
 .choice{color:#f5f0ff!important;-webkit-text-fill-color:#f5f0ff;background:rgba(10,12,34,.985);border-color:rgba(173,153,255,.45);box-shadow:0 6px 18px rgba(2,3,17,.38)}
 .choice.primary{background:linear-gradient(110deg,#fa4bd5,#a85cff);color:#21091f!important;-webkit-text-fill-color:#21091f;border-color:#f780eb}
 .dialog{background:rgba(9,11,31,.99)}
 .ask input{background:rgba(9,11,31,.99)!important;color:#f5f0ff!important;-webkit-text-fill-color:#f5f0ff}
-.char{bottom:calc(var(--ui-h,180px) + 12px)!important;width:min(370px,70vw,max(100px,calc((var(--stage-h,640px) - var(--ui-h,180px) - 24px)/1.375)))!important;min-width:0!important}
-.char .mika{-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 89%,rgba(0,0,0,.76) 94%,transparent 100%);mask-image:linear-gradient(180deg,#000 0%,#000 89%,rgba(0,0,0,.76) 94%,transparent 100%)}
+.char,.char-back{pointer-events:none}
+.char{z-index:6}
+.char-back{position:absolute;left:50%;bottom:0;transform:translateX(-50%);z-index:2;animation:bob 5.2s ease-in-out infinite}
+.stage[data-sprite-version="new"] .char,.stage[data-sprite-version="new"] .char-back{bottom:0!important;width:min(430px,78vw,calc((var(--stage-h,640px) - 16px)/1.5))!important;min-width:0!important;aspect-ratio:2/3}
+.stage[data-sprite-version="old"] .char{bottom:calc(var(--ui-h,180px) - 8px)!important;width:min(370px,70vw,max(100px,calc((var(--stage-h,640px) - var(--ui-h,180px) - 24px)/1.375)))!important;min-width:0!important;aspect-ratio:.732}
+.char-back .mika-back{position:absolute;left:50%;bottom:0;display:block;width:auto;height:100%;max-width:none;object-fit:contain;object-position:center bottom;transform:translateX(calc(-50% + var(--expr-shift,0px))) scaleX(var(--expr-scale,1)) rotate(var(--expr-tilt,0deg));transform-origin:bottom center;transition:transform .18s ease;filter:none;mix-blend-mode:normal}
+.stage[data-sprite-version="new"] .char .mika{clip-path:inset(0 0 calc(var(--ui-h,180px) - 18px) 0);-webkit-mask-image:none;mask-image:none}
+.stage[data-sprite-version="new"] .char-back .mika-back{clip-path:inset(calc(100% - var(--ui-h,180px) + 18px) 0 0 0)}
+.stage[data-sprite-version="old"] .char-back{display:none}
+@media(prefers-reduced-motion:reduce){.char,.char-back{animation:none!important}}
 @media(prefers-reduced-motion:reduce){.home-hero,.stage{scroll-behavior:auto}}
 </style>
 
