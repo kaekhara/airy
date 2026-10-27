@@ -648,6 +648,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
     </section>
     <section class="home-progress panel" aria-label="Уровень и опыт"><div class="home-level"><span>УРОВЕНЬ</span><b id="homeLevel">1</b></div><div class="home-xp"><div class="home-xp-title"><b id="homeRank">Новичок</b><span><strong id="homeXp">0</strong> XP</span></div><div class="home-xp-track"><i id="homeXpFill"></i></div><small id="homeXpNext">0 / 60 опыта до следующего уровня</small></div><div class="home-stars"><span aria-hidden="true">✦</span><b id="homePoints">0</b><small>ОПЫТА</small></div></section>
     <section class="home-section"><div class="home-section-head"><div><span class="home-eyebrow">ТВОЙ ПУТЬ</span><h2>Мои навыки</h2></div><button class="home-link" type="button" data-tab="tree">Все навыки <span>→</span></button></div><div class="home-skills" id="homeSkills"></div></section>
+    <section class="home-latest" id="homeLatest" aria-label="Последнее изменение"><span class="home-latest-mark" aria-hidden="true">✦</span><div class="home-latest-copy"><small>ПОСЛЕДНЕЕ ИЗМЕНЕНИЕ</small><b id="homeLatestTitle"></b><span id="homeLatestDetail"></span></div><button class="home-hold" id="homeHoldTree" type="button" aria-label="Удерживай, чтобы открыть древо навыков"><span class="home-hold-fill" aria-hidden="true"></span><span class="home-hold-label">Удерживай → Древо</span></button></section>
     <section class="home-section home-activity-section"><div class="home-section-head"><div><span class="home-eyebrow">ПОСЛЕДНИЕ ШАГИ</span><h2>Недавняя активность</h2></div><button class="home-link" type="button" data-tab="journal">Весь дневник <span>→</span></button></div><div class="home-activity" id="homeActivity"></div></section>
     <div class="scene-heading" id="scenePanel"><div><span class="home-eyebrow">ВИЗУАЛЬНАЯ НОВЕЛЛА</span><h2>Время с Микой</h2></div><span>✦ AIRY</span></div>
     <div class="stage" id="stage" data-time="night">
@@ -1157,6 +1158,10 @@ function renderDashboard(){
   $('#homeSkills').innerHTML=branches.length?branches.map((b,i)=>{const lvx=S.bl[b.id]||{L:1,frac:0};const pct=Math.round(lvx.frac*100);return '<article class="home-skill" style="--skill-color:'+esc(b.c)+'"><div class="home-skill-top"><span class="home-skill-icon" aria-hidden="true">'+icons[i%icons.length]+'</span><b title="'+esc(b.name)+'">'+esc(b.name)+'</b></div><small>Уровень '+num(lvx.L)+'</small><div class="home-skill-track"><i style="width:'+pct+'%"></i></div><div class="home-skill-foot"><span>'+num(S.bxp[b.id]||0)+' XP</span><span>'+pct+'%</span></div></article>';}).join(''):'<div class="home-empty">Добавь первую ветку навыков в древе.</div>';
   const recent=store.proofs.slice().sort((a,b)=>b.ts-a.ts).slice(0,3);
   $('#homeActivity').innerHTML=recent.length?recent.map(p=>'<article class="home-activity-row"><span class="home-activity-icon" aria-hidden="true">✓</span><div class="home-activity-copy"><b>'+esc((SK[p.skill]&&SK[p.skill].name)||'Практика')+'</b><small>'+esc(String(p.text||'Отмечен прогресс').slice(0,100))+'</small></div><span class="home-activity-xp">+'+num(p.xp||0)+' XP</span><time class="home-activity-time">'+esc(p.day||'')+'</time></article>').join(''):'<div class="home-empty">Твои первые шаги появятся здесь. Запиши практику и копи опыт — я замечу, конечно.</div>';
+  const latestProof=recent[0],latestEdit=store.profile&&store.profile.lastSkillChange;
+  const useEdit=latestEdit&&Number(latestEdit.ts)>(latestProof?Number(latestProof.ts):0);
+  const latest=useEdit?{title:latestEdit.title,detail:latestEdit.detail}:latestProof?{title:'Прогресс: '+((SK[latestProof.skill]&&SK[latestProof.skill].name)||'навык'),detail:'+'+num(latestProof.xp||0)+' XP · '+String(latestProof.text||'Запись в дневнике').slice(0,90)}:{title:'Начни с первой ветки',detail:'Добавь навык или отметь практику — результат появится здесь.'};
+  $('#homeLatestTitle').textContent=latest.title;$('#homeLatestDetail').textContent=latest.detail;
 }
 /* ---------- tabs ---------- */
 function show(tab,silent){
@@ -1176,6 +1181,13 @@ $('#sideNav').addEventListener('click',e=>{const b=e.target.closest('button[data
 $('#railAccount').addEventListener('click',()=>$('#accountToggle').click());
 $('#homeTalk').addEventListener('click',()=>{launchMikaChat();requestAnimationFrame(()=>{const target=$('#stage');target?.scrollIntoView({behavior:REDUCED?'auto':'smooth',block:'center',inline:'nearest'});requestAnimationFrame(measure);});});
 $('#homePractice').addEventListener('click',()=>openCheckin());
+const holdTree=$('#homeHoldTree');let holdTimer=0,holdDone=false;
+function stopHold(){clearTimeout(holdTimer);holdTimer=0;holdTree.classList.remove('is-holding');}
+function completeHold(){stopHold();holdDone=true;show('tree');holdTree.blur();}
+holdTree.addEventListener('pointerdown',e=>{if(e.button!==0)return;holdDone=false;holdTree.classList.add('is-holding');holdTimer=setTimeout(completeHold,720);});
+['pointerup','pointercancel','pointerleave'].forEach(type=>holdTree.addEventListener(type,stopHold));
+holdTree.addEventListener('click',e=>{if(holdDone){holdDone=false;return;}if(e.detail===0){completeHold();return;}toast('Зажми кнопку, чтобы открыть древо.');});
+holdTree.addEventListener('keydown',e=>{if(!e.repeat&&(e.key==='Enter'||e.key===' ')){e.preventDefault();completeHold();}});
 document.addEventListener('click',e=>{const b=e.target instanceof Element?e.target.closest('button[data-tab]'):null;if(b&&!b.closest('#nav')&&!b.closest('#sideNav'))show(b.dataset.tab);});
 let welcomeStart=null;
 function finishWelcome(tab){
@@ -1462,6 +1474,7 @@ $('#ciForm').addEventListener('submit',async e=>{
     if(!S.byDay.has(entry.day)){const st=computeStats([entry].concat(store.proofs)).streak;entry.bonus=Math.min(st,10);entry.xp+=entry.bonus;}
     const after=computeStats([entry].concat(store.proofs));
     await store.addProof(entry);
+    if(store.mode==='db'){store.proofs=[entry].concat(store.proofs);renderAll();}
     if(quest){try{await store.saveProfile({quests:((store.profile&&store.profile.quests)||[]).map(q=>q.id===quest.id?Object.assign({},q,{done:true}):q)});}catch(e4){}}
     closeCheckin();
     const lines=afterLines(entry,before,after);
@@ -1596,7 +1609,7 @@ function editSkill(id){
     const allNames=TREE.flatMap(b=>[{id:b.id,name:b.name},...b.leaves.map(l=>({id:l.id,name:l.name}))]);
     if(allNames.some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase())){err.textContent='Такое название уже используется.';return;}
     const edits=Object.assign({},(store.profile||{}).skillEdits||{}, {[id]:{name}});
-    try{await store.saveProfile({skillEdits:edits});$('#skOverlay').hidden=true;toast('Название навыка обновлено.');}
+    try{const patch={skillEdits:edits,lastSkillChange:{ts:Date.now(),title:'Переименован навык «'+name+'»',detail:'Изменение сохранено в древе навыков.'}};await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();$('#skOverlay').hidden=true;show('novel');toast('Название навыка обновлено.');}
     catch(e){err.textContent='Не удалось сохранить изменения.';}
   });
 }
@@ -1694,9 +1707,10 @@ $('#newAdd').addEventListener('click',async()=>{
   err.textContent='';const uid='c'+Date.now().toString(36);
   const p=store.profile||{};
   try{
-    if(par===' new'){const cb=(p.customBranches||[]).concat([{id:'cb-'+uid,name:name,c:HUES[(p.customBranches||[]).length%HUES.length]}]);await store.saveProfile({customBranches:cb});}
-    else{const cl=(p.customLeaves||[]).concat([{id:'cl-'+uid,name:name,branch:par}]);await store.saveProfile({customLeaves:cl});}
-    $('#newName').value='';toast('Навык «'+name+'» добавлен в древо.');
+    const change={ts:Date.now(),title:(par===' new'?'Добавлена ветка «':'Добавлен навык «')+name+'»',detail:par===' new'?'Новая ветка появилась в древе навыков.':'Новый навык появился в ветке «'+(SK[par]?.name||'Мои навыки')+'».'};
+    let patch;if(par===' new'){const cb=(p.customBranches||[]).concat([{id:'cb-'+uid,name:name,c:HUES[(p.customBranches||[]).length%HUES.length]}]);patch={customBranches:cb,lastSkillChange:change};}
+    else{const cl=(p.customLeaves||[]).concat([{id:'cl-'+uid,name:name,branch:par}]);patch={customLeaves:cl,lastSkillChange:change};}
+    await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();$('#newName').value='';show('novel');toast('Навык «'+name+'» добавлен в древо.');
   }catch(e){err.textContent='Не удалось сохранить навык.';}
 });
 
@@ -2004,7 +2018,28 @@ body[data-theme-mode="day"] .settings-section{background:rgba(65,48,77,.035)}bod
 .stage[data-sprite-version="old"] .char{bottom:calc(var(--ui-h,180px) - 8px)!important;width:min(370px,70vw,max(100px,calc((var(--stage-h,640px) - var(--ui-h,180px) - 24px)/1.375)))!important;min-width:0!important;aspect-ratio:.732}
 .stage[data-sprite-version="new"] .char .mika{-webkit-mask-image:linear-gradient(180deg,#000 0%,#000 calc(100% - var(--ui-h,180px) - 28px),rgba(0,0,0,.7) calc(100% - var(--ui-h,180px) + 4px),transparent calc(100% - var(--ui-h,180px) + 70px));mask-image:linear-gradient(180deg,#000 0%,#000 calc(100% - var(--ui-h,180px) - 28px),rgba(0,0,0,.7) calc(100% - var(--ui-h,180px) + 4px),transparent calc(100% - var(--ui-h,180px) + 70px))}
 .ui::before{content:"";position:absolute;z-index:-1;left:50%;top:-28px;bottom:0;width:min(100%,930px);transform:translateX(-50%);border-radius:28px 28px 0 0;background:linear-gradient(180deg,transparent 0%,rgba(8,10,30,.72) 58px,rgba(8,10,30,.92) 126px);pointer-events:none}
+.home-latest{display:flex;align-items:center;gap:14px;margin:4px 0 28px;padding:15px 16px;border:1px solid rgba(224,111,217,.36);border-radius:18px;background:linear-gradient(110deg,rgba(30,26,66,.96),rgba(48,29,72,.94));box-shadow:0 10px 30px rgba(11,7,32,.16)}
+.home-latest-mark{display:grid;place-items:center;flex:none;width:42px;height:42px;border-radius:14px;background:rgba(224,111,217,.15);color:#f69fe9;font-size:25px}
+.home-latest-copy{display:grid;gap:2px;min-width:0;flex:1}.home-latest-copy small{color:#e78cff;font-size:10px;font-weight:900;letter-spacing:.12em}.home-latest-copy b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px}.home-latest-copy>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#c5bad7;font-size:11px}
+.home-hold{position:relative;isolation:isolate;overflow:hidden;flex:none;min-height:42px;padding:0 16px;border:1px solid rgba(229,130,230,.62);border-radius:13px;background:rgba(16,13,40,.9);color:#fbe9ff;font-size:12px;font-weight:850;touch-action:none}
+.home-hold-fill{position:absolute;z-index:-1;inset:0;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,#d849ae,#a55df1);pointer-events:none}.home-hold.is-holding .home-hold-fill{animation:hold-fill .72s linear forwards}.home-hold.is-holding{border-color:#f5a1e9;box-shadow:0 0 20px rgba(219,85,192,.32)}.home-hold:focus-visible{outline:3px solid #84daeb;outline-offset:2px}
+@keyframes hold-fill{to{transform:scaleX(1)}}
+@media(max-width:580px){.home-latest{flex-wrap:wrap;gap:10px}.home-latest-copy{flex-basis:calc(100% - 54px)}.home-hold{width:100%}}
+body[data-theme-mode="day"] .home-hero{background:radial-gradient(ellipse at 75% 45%,rgba(183,82,175,.17),transparent 42%),linear-gradient(120deg,#fcf8fd,#e8e3f6);border-color:rgba(119,66,141,.24);box-shadow:0 14px 38px rgba(78,48,95,.12)}
+@media(max-width:560px){body[data-theme-mode="day"] .home-art{opacity:.2}body[data-theme-mode="day"] .art-caption{display:none}}
+body[data-theme-mode="day"] .home-copy h1{color:#2f243e}body[data-theme-mode="day"] .home-copy h1 em{background-image:linear-gradient(100deg,#713696,#aa3c83 72%,#7048aa)}body[data-theme-mode="day"] .home-eyebrow,body[data-theme-mode="day"] .scene-heading>span{color:#823479}
+body[data-theme-mode="day"] .home-actions .primary,body[data-theme-mode="day"] .btn.primary{background:linear-gradient(110deg,#a93487,#8243a6);color:#fff;border-color:#a93487;box-shadow:0 6px 20px rgba(146,57,128,.18)}body[data-theme-mode="day"] .home-actions .primary:hover,body[data-theme-mode="day"] .btn.primary:hover{background:linear-gradient(110deg,#922c74,#6d348e);color:#fff}
+body[data-theme-mode="day"] .choice{background:rgba(255,255,255,.98);color:#302537!important;-webkit-text-fill-color:#302537;border-color:rgba(77,54,99,.42);box-shadow:0 5px 16px rgba(38,28,66,.14)}body[data-theme-mode="day"] .choice:hover{background:#f7e7f2;border-color:#a93487}
+body[data-theme-mode="day"] .choice.primary{background:linear-gradient(110deg,#a93487,#8243a6);color:#fff!important;-webkit-text-fill-color:#fff;border-color:#a93487}body[data-theme-mode="day"] .choice.primary:hover{background:linear-gradient(110deg,#922c74,#6d348e)}
+body[data-theme-mode="day"] .ask input{background:rgba(255,255,255,.98)!important;color:#302537!important;-webkit-text-fill-color:#302537;border-color:rgba(77,54,99,.42)}body[data-theme-mode="day"] .ask input::placeholder{color:#6b5c77;-webkit-text-fill-color:#6b5c77}
+body[data-theme-mode="day"] .dialog{background:rgba(255,255,255,.98);color:#302537;border-color:rgba(77,54,99,.35)}body[data-theme-mode="day"] .line{color:#302537}
+body[data-theme-mode="day"] .ui::before{background:linear-gradient(180deg,transparent 0%,rgba(237,230,249,.64) 58px,rgba(246,240,251,.94) 126px)}
+body[data-theme-mode="day"] .home-latest{background:linear-gradient(110deg,#fff,#f7edf9);border-color:rgba(125,60,135,.29);box-shadow:0 10px 25px rgba(78,48,95,.1)}body[data-theme-mode="day"] .home-latest-mark{background:#f4e5f3;color:#983d85}body[data-theme-mode="day"] .home-latest-copy small{color:#823479}body[data-theme-mode="day"] .home-latest-copy>span{color:#62566e}body[data-theme-mode="day"] .home-hold{background:#fff;color:#6d2f82;border-color:#94559d}body[data-theme-mode="day"] .home-hold.is-holding{color:#fff}
+body[data-theme-mode="day"] .settings-toggle,body[data-theme-mode="day"] .music-toggle,body[data-theme-mode="day"] .account-toggle{background:#fff;color:#44374e;border-color:rgba(66,45,76,.32)}body[data-theme-mode="day"] .music-toggle[aria-pressed="true"]{background:#963752;color:#fff;border-color:#963752}
+body[data-theme-mode="day"] .settings-section,body[data-theme-mode="day"] .mika-version-option{background:#fff;border-color:rgba(66,45,76,.22);color:#302537}body[data-theme-mode="day"] .mika-version-option[aria-pressed="true"]{background:linear-gradient(120deg,#f9e9f5,#efeaf9);border-color:#a3499a}body[data-theme-mode="day"] .archive-count{color:#85327a;background:#f4e5f3}
+body[data-theme-mode="day"] .sheet h2{color:#302537}
 @media(prefers-reduced-motion:reduce){.char{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.home-hold.is-holding .home-hold-fill{animation:none;transform:scaleX(1)}}
 @media(prefers-reduced-motion:reduce){.home-hero,.stage{scroll-behavior:auto}}
 </style>
 
