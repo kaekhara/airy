@@ -626,6 +626,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
       </div>
     </div>
     <div class="top-actions">
+      <span class="save-state" id="saveState" role="status" aria-live="polite" hidden></span>
       <div class="streak" data-streak-tier="seed" title="Серия активности: 0 дней" aria-label="Серия активности: 0 дней"><svg class="sakura-streak" viewBox="0 0 24 24" aria-hidden="true"><path class="sakura-petals" d="M12 2.5c1.45 0 2.35 2.03 2.3 4.15 1.57-1.42 3.75-2.13 4.78-1.1s.32 3.21-1.1 4.78c2.12-.05 4.15.85 4.15 2.3s-2.03 2.35-4.15 2.3c1.42 1.57 2.13 3.75 1.1 4.78s-3.21.32-4.78-1.1c.05 2.12-.85 4.15-2.3 4.15s-2.35-2.03-2.3-4.15c-1.57 1.42-3.75 2.13-4.78 1.1s-.32-3.21 1.1-4.78C3.9 14.98 1.87 14.08 1.87 12.63s2.03-2.35 4.15-2.3c-1.42-1.57-2.13-3.75-1.1-4.78s3.21-.32 4.78 1.1C9.65 4.53 10.55 2.5 12 2.5Z"/><circle class="sakura-core" cx="12" cy="12.5" r="2.1"/></svg><b id="streakNum">0</b><span>дн.</span></div>
       <button class="account-toggle" id="accountToggle" type="button" aria-label="Аккаунт"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.6-3.6 3-5.5 7-5.5s6.4 1.9 7 5.5"/></svg><span id="accountLabel">Войти</span></button>
       <button class="settings-toggle" id="settingsToggle" type="button" aria-label="Настройки" title="Настройки"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a8 8 0 0 0 0-6l1.5-1.2-1.5-2.6-1.8.7a8 8 0 0 0-5.2-1.5L12 2.5H9l-.4 1.9a8 8 0 0 0-5.2 1.5l-1.8-.7-1.5 2.6L1.6 9a8 8 0 0 0 0 6l-1.5 1.2 1.5 2.6 1.8-.7a8 8 0 0 0 5.2 1.5l.4 1.9h3l.4-1.9a8 8 0 0 0 5.2-1.5l1.8.7 1.5-2.6z" transform="translate(1.5 0) scale(.9)"/></svg></button>
@@ -814,6 +815,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
     <input type="url" id="ciLink" placeholder="https://github.com/…/commit/…" inputmode="url">
     <label for="ciFile">Скриншот или фото (необязательно)</label>
     <input type="file" id="ciFile" accept="image/*" multiple>
+    <p class="note" id="ciEditNote" hidden>При правке записи прикреплённые фото сохраняются без изменений.</p>
     <div class="prev" id="ciPrev"></div>
     <div class="reward" id="ciReward"></div>
     <p class="err" id="ciErr" role="alert"></p>
@@ -1005,6 +1007,11 @@ store.delProof=async function(id){
   if(store.mode==='db'){await store.col.doc(id).delete();}
   else{store.proofs=store.proofs.filter(p=>p.id!==id);lsSave();onData();}
 };
+store.updateProof=async function(id,patch){
+  const next=Object.assign({},store.proofs.find(p=>p.id===id)||{},patch);delete next.id;
+  if(store.mode==='db'){await store.col.doc(id).set(next,{merge:true});store.proofs=store.proofs.map(p=>p.id===id?Object.assign({id},next):p);onData();}
+  else{store.proofs=store.proofs.map(p=>p.id===id?Object.assign({id},next):p);lsSave();onData();}
+};
 store.saveProfile=async function(patch){
   const next=Object.assign({},store.profile,patch);
   if(store.mode==='db'){await store.base.set(next,{merge:true});}
@@ -1115,6 +1122,7 @@ $('#accountImport').addEventListener('click',async()=>{
 let S=null,activeTab='novel',jFilter='all',jSkillFilter='all',jDateFrom='',jDateTo='';
 let launchMikaChat=()=>{};
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.hidden=true;},3800);}
+function saveState(state,label){const el=$('#saveState');if(!el)return;clearTimeout(saveState.timer);el.hidden=!state;el.dataset.state=state||'';el.textContent=label||'';if(state==='saved')saveState.timer=setTimeout(()=>{el.hidden=true;},2600);}
 const MUSIC_TRACKS=['audio/sunlight-on-the-desk.mp3','audio/sunlight-on-the-desk-2.mp3'];
 const MUSIC_FADE_SECONDS=5;
 const music={context:null,master:null,players:[],active:0,enabled:false,ready:false,loading:false,transitioning:false,started:false,fadeTimer:null};
@@ -1152,11 +1160,13 @@ function promotedBranches(branchId,profile=store.profile){
 }
 function dashboardBranches(){
   const saved=Array.isArray(store.profile?.recentBranchIds)?store.profile.recentBranchIds:[];
+  const pinned=(Array.isArray(store.profile?.pinnedBranches)?store.profile.pinnedBranches:[]).filter(id=>TREE.some(b=>b.id===id));
   const proofIds=store.proofs.slice().sort((a,b)=>Number(b.ts)-Number(a.ts)).map(p=>SK[p.skill]?.branch).filter(Boolean);
   const seen=new Set(),ids=[];
   [...saved,...proofIds].forEach(id=>{if(!seen.has(id)){seen.add(id);ids.push(id);}});
-  const priority=new Map(ids.map((id,index)=>[id,index]));
-  return TREE.slice().sort((a,b)=>(priority.get(a.id)??Infinity)-(priority.get(b.id)??Infinity)).slice(0,4);
+  const priority=new Map(ids.map((id,index)=>[id,index])),byId=new Map(TREE.map(b=>[b.id,b]));
+  const rest=TREE.filter(b=>!pinned.includes(b.id)).sort((a,b)=>(priority.get(a.id)??Infinity)-(priority.get(b.id)??Infinity));
+  return [...pinned.map(id=>byId.get(id)).filter(Boolean),...rest].slice(0,4);
 }
 function renderDashboard(){
   if(!S)return;
@@ -1166,7 +1176,8 @@ function renderDashboard(){
   $('#homeXpFill').style.width=Math.round(tl.frac*100)+'%';$('#homeXpNext').textContent=tl.L>=10?'Максимальный уровень достигнут':num(S.total-tl.lo)+' / '+num(tl.hi-tl.lo)+' опыта до следующего уровня';
   const icons=['✥','◉','⌘','✿','⌁','✧'];
   const branches=dashboardBranches(),skills=$('#homeSkills'),previousOrder=Array.from(skills.querySelectorAll('[data-branch-id]'),card=>card.dataset.branchId).join('|'),nextOrder=branches.map(b=>b.id).join('|');
-  skills.innerHTML=branches.length?branches.map((b,i)=>{const lvx=S.bl[b.id]||{L:1,frac:0},iconIndex=TREE.findIndex(x=>x.id===b.id);const pct=Math.round(lvx.frac*100);return '<article class="home-skill" data-branch-id="'+esc(b.id)+'" style="--skill-color:'+esc(b.c)+';--slot:'+i+'"><div class="home-skill-top"><span class="home-skill-icon" aria-hidden="true">'+icons[iconIndex%icons.length]+'</span><b title="'+esc(b.name)+'">'+esc(b.name)+'</b></div><small>Уровень '+num(lvx.L)+'</small><div class="home-skill-track"><i style="width:'+pct+'%"></i></div><div class="home-skill-foot"><span>'+num(S.bxp[b.id]||0)+' XP</span><span>'+pct+'%</span></div></article>';}).join(''):'<div class="home-empty">Добавь первую ветку навыков в древе.</div>';
+  const pinned=new Set(store.profile?.pinnedBranches||[]);
+  skills.innerHTML=branches.length?branches.map((b,i)=>{const lvx=S.bl[b.id]||{L:1,frac:0},iconIndex=TREE.findIndex(x=>x.id===b.id);const pct=Math.round(lvx.frac*100);return '<article class="home-skill" data-branch-id="'+esc(b.id)+'" style="--skill-color:'+esc(b.c)+';--slot:'+i+'"><div class="home-skill-top"><span class="home-skill-icon" aria-hidden="true">'+icons[iconIndex%icons.length]+'</span><b title="'+esc(b.name)+'">'+esc(b.name)+'</b><button class="skill-pin'+(pinned.has(b.id)?' is-pinned':'')+'" type="button" data-pin="'+esc(b.id)+'" aria-pressed="'+pinned.has(b.id)+'" aria-label="'+(pinned.has(b.id)?'Открепить':'Закрепить')+' '+esc(b.name)+'" title="'+(pinned.has(b.id)?'Открепить навык':'Закрепить навык')+'">'+(pinned.has(b.id)?'★':'☆')+'</button></div><small>Уровень '+num(lvx.L)+'</small><div class="home-skill-track"><i style="width:'+pct+'%"></i></div><div class="home-skill-foot"><span>'+num(S.bxp[b.id]||0)+' XP · '+pct+'%</span></div><div class="home-skill-actions"><button type="button" data-skill-history="'+esc(b.id)+'">История</button><button type="button" data-skill-practice="'+esc(b.id)+'">＋ Практика</button></div></article>';}).join(''):'<div class="home-empty">Добавь первую ветку навыков в древе.</div>';
   if(previousOrder&&previousOrder!==nextOrder&&!REDUCED){skills.classList.add('is-shifting');clearTimeout(skills.shiftTimer);skills.shiftTimer=setTimeout(()=>skills.classList.remove('is-shifting'),620);}
   const recent=store.proofs.slice().sort((a,b)=>b.ts-a.ts).slice(0,3);
   $('#homeActivity').innerHTML=recent.length?recent.map(p=>'<article class="home-activity-row"><span class="home-activity-icon" aria-hidden="true">✓</span><div class="home-activity-copy"><b>'+esc((SK[p.skill]&&SK[p.skill].name)||'Практика')+'</b><small>'+esc(String(p.text||'Отмечен прогресс').slice(0,100))+'</small></div><span class="home-activity-xp">+'+num(p.xp||0)+' XP</span><time class="home-activity-time">'+esc(p.day||'')+'</time></article>').join(''):'<div class="home-empty">Твои первые шаги появятся здесь. Запиши практику и копи опыт — я замечу, конечно.</div>';
@@ -1196,6 +1207,12 @@ $('#sideNav').addEventListener('click',e=>{const b=e.target.closest('button[data
 $('#railAccount').addEventListener('click',()=>$('#accountToggle').click());
 $('#homeTalk').addEventListener('click',()=>{launchMikaChat();requestAnimationFrame(()=>{const target=$('#stage');target?.scrollIntoView({behavior:REDUCED?'auto':'smooth',block:'center',inline:'nearest'});requestAnimationFrame(measure);});});
 $('#homePractice').addEventListener('click',()=>openCheckin());
+$('#homeSkills').addEventListener('click',async e=>{
+  const practice=e.target.closest('[data-skill-practice]'),history=e.target.closest('[data-skill-history]'),pin=e.target.closest('[data-pin]');
+  if(practice){e.stopPropagation();openCheckin(practice.dataset.skillPractice);return;}
+  if(history){e.stopPropagation();openSkillHistory(history.dataset.skillHistory);return;}
+  if(pin){e.stopPropagation();const id=pin.dataset.pin,current=Array.isArray(store.profile?.pinnedBranches)?store.profile.pinnedBranches:[],next=current.includes(id)?current.filter(x=>x!==id):[...current,id];if(next.length>4){toast('Можно закрепить до четырёх навыков.');return;}saveState('saving','Сохраняю…');try{await store.saveProfile({pinnedBranches:next});store.profile=Object.assign({},store.profile,{pinnedBranches:next});renderAll();saveState('saved','Сохранено');}catch(err){saveState('error','Не сохранено');toast('Не удалось изменить закреплённые навыки.');}}
+});
 document.addEventListener('click',e=>{const b=e.target instanceof Element?e.target.closest('button[data-tab]'):null;if(b&&!b.closest('#nav')&&!b.closest('#sideNav'))show(b.dataset.tab);});
 let welcomeStart=null;
 function finishWelcome(tab){
@@ -1386,7 +1403,7 @@ function mikaChatPrompt(prefill='',menu=false){
 function talkChat(){const last=mikaHistory[mikaHistory.length-1];if(last&&last.role==='model')play([{expr:EXPRS.includes(last.expression)?last.expression:'cool',text:last.text,ask:mikaChatPrompt().ask}]);else play([mikaChatPrompt(last&&last.role==='user'?last.text:'')]);}
 
 /* ---------- check-in ---------- */
-let ciImgs=[],ciBusy=false;
+let ciImgs=[],ciBusy=false,ciEditing=null;
 const anyOverlay=()=>!$('#ciOverlay').hidden||!$('#skOverlay').hidden||!$('#lbOverlay').hidden;
 function closeAll(){
   if(!$('#ciOverlay').hidden&&!ciBusy)closeCheckin();
@@ -1402,32 +1419,36 @@ function fillSkillSelect(sel){
   el.value=ok?cur:TREE[0].id;
 }
 let ciQuest=null;
-function openCheckin(pre,quest){
+function openCheckin(pre,quest,editing){
   if(!S)return;
-  ciQuest=quest||null;
-  fillSkillSelect(pre||(store.proofs[0]&&store.proofs[0].skill)||'cyber');
-  $('#ciTitle').textContent=ciQuest?'Квест':'Запись дня';
-  $('#ciText').value=ciQuest?('Квест «'+ciQuest.title+'»: '):'';$('#ciMin').value=30;$('#ciLink').value='';$('#ciFile').value='';ciImgs=[];renderPrev();$('#ciErr').textContent='';
-  setChips();updateReward();$('#ciSubmit').disabled=false;$('#ciSubmit').textContent='Записать в дневник';
+  ciQuest=quest||null;ciEditing=editing||null;
+  fillSkillSelect((editing&&editing.skill)||pre||(store.proofs[0]&&store.proofs[0].skill)||'cyber');
+  $('#ciTitle').textContent=ciEditing?'Изменить запись':ciQuest?'Квест':'Запись дня';
+  $('#ciText').value=ciEditing?ciEditing.text:ciQuest?('Квест «'+ciQuest.title+'»: '):'';$('#ciMin').value=ciEditing?ciEditing.min:30;$('#ciLink').value=ciEditing?ciEditing.link||'':'';$('#ciFile').value='';ciImgs=[];renderPrev();$('#ciErr').textContent='';
+  $('#ciFile').hidden=!!ciEditing;document.querySelector('label[for="ciFile"]').hidden=!!ciEditing;$('#ciEditNote').hidden=!ciEditing;
+  setChips();updateReward();$('#ciSubmit').disabled=false;$('#ciSubmit').textContent=ciEditing?'Сохранить изменения':'Записать в дневник';
   $('#ciOverlay').hidden=false;setTimeout(()=>$('#ciText').focus(),30);
 }
-function closeCheckin(){$('#ciOverlay').hidden=true;ciImgs.forEach(i=>URL.revokeObjectURL(i.url));ciImgs=[];}
+function closeCheckin(){$('#ciOverlay').hidden=true;ciImgs.forEach(i=>URL.revokeObjectURL(i.url));ciImgs=[];ciEditing=null;ciQuest=null;$('#ciFile').hidden=false;document.querySelector('label[for="ciFile"]').hidden=false;$('#ciEditNote').hidden=true;}
 function setChips(){
   const box=$('#ciChips');box.innerHTML='';const cur=+$('#ciMin').value;
   [15,30,45,60,90,120].forEach(m=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=m+' мин';b.setAttribute('aria-pressed',cur===m?'true':'false');
     b.addEventListener('click',()=>{$('#ciMin').value=m;setChips();updateReward();});box.appendChild(b);});
 }
 function readForm(){
-  return{skill:$('#ciSkill').value,text:$('#ciText').value.trim(),min:Math.round(+$('#ciMin').value)||0,link:$('#ciLink').value.trim(),imgs:ciImgs.length};
+  return{skill:$('#ciSkill').value,text:$('#ciText').value.trim(),min:Math.round(+$('#ciMin').value)||0,link:$('#ciLink').value.trim(),imgs:ciEditing?(ciEditing.imgs||[]).length:ciImgs.length};
 }
 function updateReward(){
   const f=readForm();const base=xpBase({min:Math.max(0,Math.min(f.min,600)),link:!!f.link,imgs:f.imgs,len:f.text.length});
-  const first=!S.byDay.has(dayKey(Date.now()));
+  const first=!ciEditing&&!S.byDay.has(dayKey(Date.now()));
   const qb=ciQuest?10:0;
   const parts=['время '+(10+Math.round(Math.min(Math.max(f.min,0),180)/6))];
   if(f.link)parts.push('ссылка +5');if(f.imgs)parts.push('фото +5');if(f.text.length>=60)parts.push('подробный текст +3');
   if(qb)parts.push('квест +10');
-  $('#ciReward').textContent='Награда: '+(base+qb)+' XP'+(first?' и бонус за серию':'')+'  ('+parts.join(', ')+')';
+  const retainedBonus=ciEditing?(Number(ciEditing.bonus)||0):0,retainedQuest=ciEditing&&ciEditing.quest?10:0;
+  if(retainedBonus)parts.push('сохранённый бонус за серию +'+retainedBonus);
+  if(retainedQuest)parts.push('бонус выполненного квеста +10');
+  $('#ciReward').textContent=(ciEditing?'После правки: ':'Награда: ')+(base+qb+retainedBonus+retainedQuest)+' XP'+(first?' и бонус за серию':'')+'  ('+parts.join(', ')+')';
 }
 function renderPrev(){
   const box=$('#ciPrev');box.innerHTML='';
@@ -1467,6 +1488,13 @@ $('#ciForm').addEventListener('submit',async e=>{
   if(f.link&&!/^https?:\/\/\S+\.\S+/i.test(f.link)){err.textContent='Ссылка должна начинаться с http:// или https://';$('#ciLink').focus();return;}
   err.textContent='';ciBusy=true;const btn=$('#ciSubmit');btn.disabled=true;btn.textContent='Сохраняю…';
   try{
+    if(ciEditing){
+      const original=ciEditing,imgs=original.imgs||[],patch={skill:f.skill,text:f.text,min:f.min,link:f.link,xp:xpBase({min:f.min,link:!!f.link,imgs:imgs.length,len:f.text.length})+(Number(original.bonus)||0)+(original.quest?10:0)};
+      saveState('saving','Сохраняю…');await store.updateProof(original.id,patch);
+      const order={recentBranchIds:promotedBranches(SK[f.skill].branch)};
+      try{await store.saveProfile(order);store.profile=Object.assign({},store.profile,order);}catch(orderErr){console.warn('Skill order could not sync',orderErr);}
+      renderAll();closeCheckin();saveState('saved','Сохранено');toast('Запись обновлена. Опыт и прогресс пересчитаны.');return;
+    }
     const imgs=[];
     for(const im of ciImgs){
       let done=false;
@@ -1481,17 +1509,17 @@ $('#ciForm').addEventListener('submit',async e=>{
     const before=S;
     if(!S.byDay.has(entry.day)){const st=computeStats([entry].concat(store.proofs)).streak;entry.bonus=Math.min(st,10);entry.xp+=entry.bonus;}
     const after=computeStats([entry].concat(store.proofs));
-    await store.addProof(entry);
+    saveState('saving','Сохраняю…');await store.addProof(entry);
     if(store.mode==='db'&&!store.proofs.some(p=>p.id===entry.id))store.proofs=[entry].concat(store.proofs);
     const orderPatch={recentBranchIds:promotedBranches(SK[f.skill].branch)};
     store.profile=Object.assign({},store.profile,orderPatch);renderAll();
-    try{await store.saveProfile(orderPatch);}catch(orderError){console.warn('Skill order could not sync',orderError);}
+    try{await store.saveProfile(orderPatch);saveState('saved','Сохранено');}catch(orderError){console.warn('Skill order could not sync',orderError);saveState('error','Практика сохранена · порядок не сохранён');}
     if(quest){try{await store.saveProfile({quests:((store.profile&&store.profile.quests)||[]).map(q=>q.id===quest.id?Object.assign({},q,{done:true}):q)});}catch(e4){}}
     closeCheckin();
     const lines=afterLines(entry,before,after);
     if(quest)lines.splice(1,0,{expr:'proud',text:'Квест «'+quest.title+'» выполнен. Бонус +10 XP.'});
     show('novel');play(lines);
-  }catch(e3){err.textContent=('Не удалось сохранить: '+((e3&&e3.message)||'ошибка')).slice(0,180);}
+  }catch(e3){saveState('error','Не сохранено');err.textContent=('Не удалось сохранить: '+((e3&&e3.message)||'ошибка')).slice(0,180);}
   finally{ciBusy=false;btn.disabled=false;btn.textContent='Записать в дневник';}
 });
 function afterLines(en,b,a){
@@ -1553,7 +1581,7 @@ async function addDraft(){
   const qs=d.skills.map((s,i)=>s.quest?{id:'q'+uid+i,skill:s.req<=curL?leaves[i].id:bid,title:s.quest,done:false}:null).filter(Boolean);
   try{
     const patch={customBranches:cb,customLeaves:(p.customLeaves||[]).concat(leaves),quests:(p.quests||[]).concat(qs).slice(-40),recentBranchIds:promotedBranches(bid,p)};
-    await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();
+    saveState('saving','Сохраняю…');await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();saveState('saved','Сохранено');
     aiDraft=null;$('#aiPrev').innerHTML='';$('#aiGoal').value='';
     show('novel');
     toast('Добавлено в ветку «'+d.branch+'»: '+d.skills.length+' под-навыка. Квесты ждут в разделе «Квесты».');
@@ -1604,12 +1632,18 @@ function openSheet(id){
     const br=SK[sk.branch];
     h+='<p class="sub">Закрыто. Откроется, когда ветка «'+esc(br.name)+'» достигнет уровня '+sk.req+' (сейчас '+S.bl[sk.branch].L+').</p>';
   }
-  h+='<div class="actions" style="margin-top:16px"><button type="button" class="btn" id="skClose">Закрыть</button><button type="button" class="btn" id="skEdit">Переименовать</button><button type="button" class="btn danger" id="skDelete">Удалить из древа</button>'+(un?'<button type="button" class="btn primary" id="skGo">Отметить прогресс</button>':'')+'</div>';
+  h+='<div class="actions" style="margin-top:16px"><button type="button" class="btn" id="skClose">Закрыть</button><button type="button" class="btn" id="skHistory">Весь дневник по навыку</button><button type="button" class="btn" id="skEdit">Переименовать</button><button type="button" class="btn danger" id="skDelete">Удалить из древа</button>'+(un?'<button type="button" class="btn primary" id="skGo">＋ Записать практику</button>':'')+'</div>';
   $('#skSheet').innerHTML=h;$('#skOverlay').hidden=false;
   $('#skClose').addEventListener('click',()=>{$('#skOverlay').hidden=true;});
   $('#skEdit').addEventListener('click',()=>editSkill(id));
   $('#skDelete').addEventListener('click',()=>removeSkill(id));
+  $('#skHistory').addEventListener('click',()=>{$('#skOverlay').hidden=true;openSkillHistory(id);});
   const go=$('#skGo');if(go)go.addEventListener('click',()=>{$('#skOverlay').hidden=true;openCheckin(id);});
+}
+function openSkillHistory(id){
+  const sk=SK[id];if(!sk)return;
+  jFilter=sk.isBranch?id:sk.branch;jSkillFilter=sk.isBranch?'all':id;jDateFrom='';jDateTo='';
+  show('journal');renderJournal();
 }
 function editSkill(id){
   const sk=SK[id];if(!sk)return;
@@ -1622,7 +1656,7 @@ function editSkill(id){
     const allNames=TREE.flatMap(b=>[{id:b.id,name:b.name},...b.leaves.map(l=>({id:l.id,name:l.name}))]);
     if(allNames.some(x=>x.id!==id&&x.name.toLowerCase()===name.toLowerCase())){err.textContent='Такое название уже используется.';return;}
     const edits=Object.assign({},(store.profile||{}).skillEdits||{}, {[id]:{name}});
-    try{const patch={skillEdits:edits,recentBranchIds:promotedBranches(sk.branch)};await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();$('#skOverlay').hidden=true;show('novel');toast('Название навыка обновлено.');}
+    try{const patch={skillEdits:edits,recentBranchIds:promotedBranches(sk.branch)};saveState('saving','Сохраняю…');await store.saveProfile(patch);saveState('saved','Сохранено');store.profile=Object.assign({},store.profile,patch);renderAll();$('#skOverlay').hidden=true;show('novel');toast('Название навыка обновлено.');}
     catch(e){err.textContent='Не удалось сохранить изменения.';}
   });
 }
@@ -1722,7 +1756,7 @@ $('#newAdd').addEventListener('click',async()=>{
   try{
     let patch;if(par===' new'){const branchId='cb-'+uid,cb=(p.customBranches||[]).concat([{id:branchId,name:name,c:HUES[(p.customBranches||[]).length%HUES.length]}]);patch={customBranches:cb,recentBranchIds:promotedBranches(branchId,p)};}
     else{const cl=(p.customLeaves||[]).concat([{id:'cl-'+uid,name:name,branch:par}]);patch={customLeaves:cl,recentBranchIds:promotedBranches(par,p)};}
-    await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();$('#newName').value='';show('novel');toast('Навык «'+name+'» добавлен в древо.');
+    saveState('saving','Сохраняю…');await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();saveState('saved','Сохранено');$('#newName').value='';show('novel');toast('Навык «'+name+'» добавлен в древо.');
   }catch(e){err.textContent='Не удалось сохранить навык.';}
 });
 
@@ -1771,7 +1805,7 @@ function renderJournal(){
     const sk=SK[p.skill]||{name:'Другой навык',c:'#a9a1cf'};
     let link='';if(p.link){let host=p.link;try{host=new URL(p.link).hostname;}catch(e){}link='<a class="e-link" href="'+esc(p.link)+'" target="_blank" rel="noopener noreferrer">'+esc(host)+' ↗</a>';}
     const imgs=(p.imgs&&p.imgs.length)?'<div class="e-imgs">'+p.imgs.map(i=>{const src=i.id?'/_blob/'+i.id:i.d;return '<button type="button" data-src="'+esc(src)+'" aria-label="Открыть фото"><img src="'+esc(src)+'" alt="" loading="lazy"></button>';}).join('')+'</div>':'';
-    html+='<article class="entry" style="--c:'+esc(sk.c)+'" data-id="'+esc(p.id)+'"><div class="e-head"><span class="e-skill">'+esc(sk.name)+'</span><span>'+esc(new Date(p.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}))+'</span><span>'+esc(p.min)+' мин</span><span class="e-xp">+'+esc(p.xp)+' XP</span></div><p>'+esc(p.text)+'</p>'+link+imgs+'<div class="e-act"><button type="button" class="btn small danger" data-del="'+esc(p.id)+'">Удалить</button></div></article>';
+    html+='<article class="entry" style="--c:'+esc(sk.c)+'" data-id="'+esc(p.id)+'"><div class="e-head"><span class="e-skill">'+esc(sk.name)+'</span><span>'+esc(new Date(p.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}))+'</span><span>'+esc(p.min)+' мин</span><span class="e-xp">+'+esc(p.xp)+' XP</span></div><p>'+esc(p.text)+'</p>'+link+imgs+'<div class="e-act"><button type="button" class="btn small" data-edit="'+esc(p.id)+'">Изменить</button><button type="button" class="btn small danger" data-del="'+esc(p.id)+'">Удалить</button></div></article>';
   });
   list.innerHTML=html;
 }
@@ -1782,6 +1816,7 @@ $('#journalReset').addEventListener('click',()=>{jFilter='all';jSkillFilter='all
 $('#journalList').addEventListener('click',async e=>{
   const im=e.target.closest('.e-imgs button');
   if(im){$('#lbImg').src=im.dataset.src;$('#lbOverlay').hidden=false;return;}
+  const edit=e.target.closest('[data-edit]');if(edit){const p=store.proofs.find(x=>x.id===edit.dataset.edit);if(p)openCheckin(p.skill,null,p);return;}
   const del=e.target.closest('[data-del]');
   if(del){const act=del.parentElement;act.innerHTML='<span>Удалить запись?</span><button type="button" class="btn small danger" data-yes="'+esc(del.dataset.del)+'">Да</button><button type="button" class="btn small" data-no="1">Нет</button>';return;}
   const no=e.target.closest('[data-no]');if(no){renderJournal();return;}
@@ -1789,10 +1824,11 @@ $('#journalList').addEventListener('click',async e=>{
   if(yes){
     const id=yes.dataset.yes;const p=store.proofs.find(x=>x.id===id);
     try{
+      saveState('saving','Удаляю…');
       await store.delProof(id);
       if(p&&p.imgs&&store.assets){p.imgs.forEach(i=>{if(i.id){store.assets.delete(i.id).catch(()=>{});}});}
-      toast('Запись удалена.');
-    }catch(err){toast('Не удалось удалить запись.');}
+      saveState('saved','Сохранено');toast('Запись удалена. XP, серия и прогресс пересчитаны.');
+    }catch(err){saveState('error','Не сохранено');toast('Не удалось удалить запись. Проверь соединение и повтори.');}
   }
 });
 
@@ -2033,6 +2069,13 @@ body[data-theme-mode="day"] .settings-section{background:rgba(65,48,77,.035)}bod
 .home-skills.is-shifting .home-skill{animation:skill-shift .38s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--slot)*45ms)}
 @keyframes skill-shift{from{opacity:.55;transform:translateX(-18px) scale(.97)}to{opacity:1;transform:translateX(0) scale(1)}}
 .nav-in{touch-action:none}.nav-in.is-scrubbing button[data-scrub-preview]{transform:scale(1.08);background:linear-gradient(135deg,#f4afd4,#dc87ca);color:#2d1735;box-shadow:0 7px 24px rgba(229,103,189,.36)}.nav-in.is-scrubbing button[aria-current="page"]:not([data-scrub-preview]){background:transparent;color:var(--muted);box-shadow:none}
+.save-state{position:fixed;z-index:40;top:calc(var(--top-h,76px) + 10px);right:18px;display:inline-flex;align-items:center;gap:7px;max-width:min(86vw,340px);padding:8px 12px;border:1px solid rgba(188,146,243,.35);border-radius:999px;background:rgba(24,19,35,.96);color:#f3eafb;font-size:11px;font-weight:750;box-shadow:0 8px 26px rgba(0,0,0,.2);pointer-events:none}.save-state::before{content:"";width:7px;height:7px;flex:none;border-radius:50%;background:#68dfb1}.save-state[data-state="saving"]::before{background:#f3bd68;animation:save-pulse 1s ease-in-out infinite}.save-state[data-state="error"]{border-color:rgba(226,91,116,.55);background:#3d202e;color:#ffe5e9}.save-state[data-state="error"]::before{background:#ff7184}@keyframes save-pulse{50%{opacity:.35;transform:scale(.75)}}
+.home-skill{position:relative;padding-bottom:12px}.home-skill-top b{flex:1}.skill-pin{flex:none;width:28px;height:28px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.045);color:var(--muted);font-size:16px;line-height:1}.skill-pin.is-pinned{color:#f3bf69;border-color:rgba(243,191,105,.5);background:rgba(243,191,105,.12)}.home-skill-actions{display:flex;gap:6px;margin-top:11px}.home-skill-actions button{min-width:0;flex:1;padding:6px 5px;border:1px solid var(--line);border-radius:9px;background:rgba(255,255,255,.045);color:var(--muted);font:700 9px var(--f-body);white-space:nowrap}.home-skill-actions button:hover,.skill-pin:hover{border-color:var(--skill-color);color:var(--ink)}
+.e-act{display:flex;flex-wrap:wrap;gap:7px}.e-act button{min-height:34px}.ci-edit-note{color:var(--muted)}
+body[data-theme-mode="day"] .save-state{background:#fff;color:#302b38;border-color:rgba(49,40,61,.2);box-shadow:0 8px 24px rgba(51,43,67,.12)}body[data-theme-mode="day"] .save-state[data-state="error"]{background:#fff0f2;color:#81283b;border-color:#e5a1ad}
+body[data-theme-mode="day"] .home-skill-actions button,body[data-theme-mode="day"] .skill-pin{background:#fff;color:#5f5969;border-color:rgba(49,40,61,.2)}body[data-theme-mode="day"] .skill-pin.is-pinned{background:#fff6df;color:#795a19;border-color:rgba(133,95,24,.4)}body[data-theme-mode="day"] .home-skill-actions button:hover{background:#f7eaf0;color:#302b38}
+@media(max-width:560px){.home-skill{min-height:151px;padding:10px}.home-skill-actions{gap:4px}.home-skill-actions button{font-size:8px;padding-inline:3px}.save-state{right:10px;top:calc(var(--top-h,74px) + 6px);font-size:10px;padding:7px 10px}}
+@media(prefers-reduced-motion:reduce){.save-state[data-state="saving"]::before{animation:none}}
 body[data-theme-mode="day"] .home-hero{background:radial-gradient(ellipse at 75% 45%,rgba(183,82,175,.17),transparent 42%),linear-gradient(120deg,#fcf8fd,#e8e3f6);border-color:rgba(119,66,141,.24);box-shadow:0 14px 38px rgba(78,48,95,.12)}
 @media(max-width:560px){body[data-theme-mode="day"] .home-art{opacity:.2}body[data-theme-mode="day"] .art-caption{display:none}}
 body[data-theme-mode="day"] .home-copy h1{color:#2f243e}body[data-theme-mode="day"] .home-copy h1 em{background-image:linear-gradient(100deg,#713696,#aa3c83 72%,#7048aa)}body[data-theme-mode="day"] .home-eyebrow,body[data-theme-mode="day"] .scene-heading>span{color:#823479}
