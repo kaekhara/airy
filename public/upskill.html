@@ -644,8 +644,8 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
 
   <section class="view" id="view-novel" aria-label="Главная">
     <section class="home-hero" aria-labelledby="homeTitle">
-      <div class="home-copy"><span class="home-eyebrow"><i></i> ТВОЁ ПРОСТРАНСТВО РОСТА</span><h1 id="homeTitle" tabindex="-1">С возвращением,<br><em id="homeName">путешественник</em></h1><p>Маленькие шаги каждый день — и однажды ты удивишься, как далеко ушёл.</p><div class="home-actions"><button class="btn primary" id="homeTalk" type="button"><span aria-hidden="true">✦</span> Поговорить с Микой</button><button class="btn home-secondary" id="homePractice" type="button">Записать практику <span aria-hidden="true">↗</span></button></div></div>
-      <div class="home-art"><div class="art-glow"></div><img src="images/airy/mika-hero.webp" alt="Мика на фоне неонового вечернего города" fetchpriority="high"><span class="art-caption"><i>✦</i> твой спутник в обучении</span></div>
+      <div class="home-copy"><span class="home-eyebrow"><i></i> ТВОЁ ПРОСТРАНСТВО РОСТА</span><h1 id="homeTitle" tabindex="-1">С возвращением,<br><em id="homeName">путешественник</em></h1><p>Маленькие шаги каждый день — и однажды ты удивишься, как далеко ушёл.</p><div class="home-actions"><button class="btn primary" id="homeTalk" type="button"><span aria-hidden="true">✦</span> Поговорить с Микой</button><button class="btn home-secondary" id="homePractice" type="button">Записать практику <span aria-hidden="true">↗</span></button></div><span class="art-caption"><i>✦</i> твой спутник в обучении</span></div>
+      <div class="home-art"><div class="art-glow"></div><img src="images/airy/mika-hero.webp" alt="Мика на фоне неонового вечернего города" fetchpriority="high"></div>
     </section>
     <section class="home-progress panel" aria-label="Уровень и опыт"><div class="home-level"><span>УРОВЕНЬ</span><b id="homeLevel">1</b></div><div class="home-xp"><div class="home-xp-title"><b id="homeRank">Новичок</b><span><strong id="homeXp">0</strong> XP</span></div><div class="home-xp-track"><i id="homeXpFill"></i></div><small id="homeXpNext">0 / 60 опыта до следующего уровня</small></div><div class="home-stars"><span aria-hidden="true">✦</span><b id="homePoints">0</b><small>ОПЫТА</small></div></section>
     <section class="home-section"><div class="home-section-head"><div><span class="home-eyebrow">ТВОЙ ПУТЬ</span><h2>Мои навыки</h2></div><button class="home-link" type="button" data-tab="tree">Все навыки <span>→</span></button></div><div class="home-skills" id="homeSkills"></div></section>
@@ -880,7 +880,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
     <h2 id="settingsTitle">Настройки</h2>
     <p class="sub">Управление данными и архивом навыков.</p>
     <section class="settings-section" aria-labelledby="skillArchiveTitle">
-      <div class="settings-section-head"><div><h3 id="skillArchiveTitle">Архив навыков</h3><p>Удалённые навыки скрыты из древа, но их записи и прогресс сохранены.</p></div><span id="archiveCount" class="archive-count">0</span></div>
+      <div class="settings-section-head"><div><h3 id="skillArchiveTitle">Архив навыков</h3><p>Восстанови навык в древо или удали его из архива навсегда. Записи в дневнике сохраняются.</p></div><span id="archiveCount" class="archive-count">0</span></div>
       <div id="skillArchive" class="skill-archive" aria-live="polite"></div>
     </section>
     <button class="btn settings-done" id="settingsDone" type="button">Готово</button>
@@ -1877,13 +1877,13 @@ function renderProfile(){
   $$('#mikaVersionOptions [data-mika-version]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.mikaVersion===selectedVersion)));
 }
 function renderSkillArchive(){
-  const hiddenIds=new Set((store.profile&&store.profile.hiddenSkills)||[]),edits=(store.profile&&store.profile.skillEdits)||{},names={};
+  const hiddenIds=new Set((store.profile&&store.profile.hiddenSkills)||[]),purgedIds=new Set((store.profile&&store.profile.purgedSkills)||[]),edits=(store.profile&&store.profile.skillEdits)||{},names={};
   BASE.forEach(branch=>{names[branch.id]=(edits[branch.id]&&edits[branch.id].name)||branch.name;branch.leaves.forEach(skill=>{names[skill.id]=(edits[skill.id]&&edits[skill.id].name)||skill.name;});});
   ((store.profile&&store.profile.customBranches)||[]).forEach(branch=>{names[branch.id]=(edits[branch.id]&&edits[branch.id].name)||branch.name;});
   ((store.profile&&store.profile.customLeaves)||[]).forEach(skill=>{names[skill.id]=(edits[skill.id]&&edits[skill.id].name)||skill.name;});
-  const hidden=Array.from(hiddenIds).filter(id=>names[id]),root=$('#skillArchive');
+  const hidden=Array.from(hiddenIds).filter(id=>names[id]&&!purgedIds.has(id)),root=$('#skillArchive');
   $('#archiveCount').textContent=String(hidden.length);
-  root.innerHTML=hidden.length?hidden.map(id=>'<div class="archive-skill-row"><span>'+esc(names[id])+'</span><button type="button" class="btn small" data-restore-skill="'+esc(id)+'">Восстановить</button></div>').join(''):'<p class="archive-empty">Архив пуст. Удалённые навыки будут храниться здесь.</p>';
+  root.innerHTML=hidden.length?hidden.map(id=>'<div class="archive-skill-row"><span>'+esc(names[id])+'</span><div class="archive-skill-actions"><button type="button" class="btn small" data-restore-skill="'+esc(id)+'">Восстановить</button><button type="button" class="btn small danger" data-delete-archived="'+esc(id)+'">Удалить навсегда</button></div></div>').join(''):'<p class="archive-empty">Архив пуст. Удалённые навыки будут храниться здесь.</p>';
 }
 function renderProfileCalendar(stats){
   const today=new Date();today.setHours(12,0,0,0);
@@ -1901,11 +1901,31 @@ function renderProfileCalendar(stats){
   $('#profileCalendarSummary').textContent=`Последние 35 дней · ${activeDays} ${activeWord(activeDays)} · серия ${stats.streak} ${dayWord(stats.streak)}`;
 }
 $('#skillArchive').addEventListener('click',async e=>{
+  const remove=e.target.closest('[data-delete-archived]');
+  if(remove){
+    const id=remove.dataset.deleteArchived,profile=store.profile||{},baseBranch=BASE.find(x=>x.id===id),baseLeaf=BASE.flatMap(x=>x.leaves).find(x=>x.id===id),customBranch=(profile.customBranches||[]).find(x=>x.id===id),customLeaf=(profile.customLeaves||[]).find(x=>x.id===id);
+    const branch=baseBranch||customBranch,ids=[id];
+    if(baseBranch)baseBranch.leaves.forEach(leaf=>ids.push(leaf.id));
+    if(customBranch)(profile.customLeaves||[]).filter(leaf=>leaf.branch===id).forEach(leaf=>ids.push(leaf.id));
+    const label=baseBranch?.name||customBranch?.name||baseLeaf?.name||customLeaf?.name||'навык';
+    if(!window.confirm('Удалить «'+label+'» из архива навсегда? Записи в дневнике и уже полученный опыт сохранятся. Вернуть навык через архив будет нельзя.'))return;
+    const hidden=new Set(profile.hiddenSkills||[]),purged=new Set(profile.purgedSkills||[]),edits=Object.assign({},profile.skillEdits||{}),quests=(profile.quests||[]).filter(q=>!ids.includes(q.skill));
+    if(baseBranch||baseLeaf)ids.forEach(x=>{hidden.add(x);purged.add(x);});
+    else ids.forEach(x=>{hidden.delete(x);delete edits[x];});
+    const patch={hiddenSkills:Array.from(hidden),purgedSkills:Array.from(purged),skillEdits:edits,quests,
+      customBranches:(profile.customBranches||[]).filter(x=>!ids.includes(x.id)),
+      customLeaves:(profile.customLeaves||[]).filter(x=>!ids.includes(x.id)&&!ids.includes(x.branch)),
+      pinnedBranches:(profile.pinnedBranches||[]).filter(x=>!ids.includes(x)),
+      recentBranchIds:(profile.recentBranchIds||[]).filter(x=>!ids.includes(x))};
+    try{saveState('saving','Удаляю навык…');await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);renderAll();renderSkillArchive();saveState('saved','Сохранено');toast('Навык удалён из архива. Записи и опыт сохранены.');}
+    catch(err){saveState('error','Не сохранено');toast('Не удалось удалить навык. Попробуй ещё раз.');}
+    return;
+  }
   const b=e.target.closest('[data-restore-skill]');if(!b)return;
   const id=b.dataset.restoreSkill,branch=BASE.find(x=>x.id===id)||((store.profile.customBranches||[]).find(x=>x.id===id));
   const ids=[id];if(branch){(branch.leaves||[]).forEach(l=>ids.push(l.id));(store.profile.customLeaves||[]).filter(l=>l.branch===id).forEach(l=>ids.push(l.id));}
   const hidden=(store.profile.hiddenSkills||[]).filter(x=>!ids.includes(x));
-  try{await store.saveProfile({hiddenSkills:hidden});store.profile=Object.assign({},store.profile,{hiddenSkills:hidden});renderAll();toast('Навык возвращён в древо.');}catch(err){toast('Не удалось восстановить навык.');}
+  try{saveState('saving','Сохраняю…');await store.saveProfile({hiddenSkills:hidden});store.profile=Object.assign({},store.profile,{hiddenSkills:hidden});renderAll();renderSkillArchive();saveState('saved','Сохранено');toast('Навык возвращён в древо.');}catch(err){saveState('error','Не сохранено');toast('Не удалось восстановить навык.');}
 });
 let settingsReturnFocus=null;
 function closeSettings(){const overlay=$('#settingsOverlay');overlay.hidden=true;if(settingsReturnFocus&&settingsReturnFocus.focus)settingsReturnFocus.focus();}
@@ -2006,7 +2026,7 @@ $('#mikaVersionOptions').addEventListener('click',async e=>{
   const startMika=()=>{if(last&&last.role==='model')talkChat();else play([mikaChatPrompt(last&&last.role==='user'?last.text:'',!mikaHistory.length)]);};
   launchMikaChat=startMika;
   let hasProgress=store.proofs.length>0||mikaHistory.length>0;
-  ['quests','customBranches','customLeaves','skillEdits','hiddenSkills','customPortrait'].forEach(key=>{if(store.profile&&store.profile[key]&&(!Array.isArray(store.profile[key])||store.profile[key].length))hasProgress=true;});
+  ['quests','customBranches','customLeaves','skillEdits','hiddenSkills','purgedSkills','customPortrait'].forEach(key=>{if(store.profile&&store.profile[key]&&(!Array.isArray(store.profile[key])||store.profile[key].length))hasProgress=true;});
   let welcomeDone=false;try{welcomeDone=localStorage.getItem(ONBOARDING_KEY)==='done';}catch(e){welcomeDone=true;}
   if(!welcomeDone&&!hasProgress){
     $('#welcomeOverlay').hidden=false;
@@ -2040,10 +2060,10 @@ $('#mikaVersionOptions').addEventListener('click',async e=>{
 .settings-section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:12px}
 .settings-section-head h3{font-size:15px}.settings-section-head p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
 .archive-count{display:grid;place-items:center;min-width:30px;height:30px;padding:0 8px;border-radius:50%;background:rgba(225,93,211,.14);color:#ed9bea;font-weight:800}
-.skill-archive{display:grid;gap:8px}.archive-skill-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}.archive-skill-row>span{min-width:0;overflow-wrap:anywhere}
+.skill-archive{display:grid;gap:8px}.archive-skill-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card)}.archive-skill-row>span{min-width:0;overflow-wrap:anywhere}.archive-skill-actions{display:flex;flex:none;gap:7px;flex-wrap:wrap;justify-content:flex-end}
 .archive-empty{margin:0;padding:12px;color:var(--muted);font-size:13px}.settings-done{width:100%;margin-top:16px}
 body[data-theme-mode="day"] .settings-section{background:rgba(65,48,77,.035)}body[data-theme-mode="day"] .archive-skill-row{background:#fff}body[data-theme-mode="day"] .settings-section-head p,body[data-theme-mode="day"] .archive-empty{color:#5f5969}
-@media(max-width:520px){.top-actions{gap:5px}.settings-toggle,.music-toggle,.account-toggle{width:36px;height:36px;min-height:36px;padding:7px}.settings-toggle svg{width:18px;height:18px}.settings-sheet{padding:24px 18px 18px}.settings-section{padding:12px}.archive-skill-row{align-items:flex-start;flex-wrap:wrap}}
+@media(max-width:520px){.top-actions{gap:5px}.settings-toggle,.music-toggle,.account-toggle{width:36px;height:36px;min-height:36px;padding:7px}.settings-toggle svg{width:18px;height:18px}.settings-sheet{padding:24px 18px 18px}.settings-section{padding:12px}.archive-skill-row{align-items:flex-start;flex-wrap:wrap}.archive-skill-actions{width:100%;justify-content:flex-start}}
 .char .mika:not(.sprite-ready){visibility:hidden;opacity:0;animation:none!important}
 .char .mika.sprite-ready{visibility:visible;opacity:1;transition:opacity .18s ease}
 .char .mika.sprite-ready{visibility:visible;opacity:1}
@@ -2089,6 +2109,9 @@ body[data-theme-mode="day"] .nav-in.is-scrubbing button[data-scrub-preview]{back
 body[data-theme-mode="day"] .settings-toggle,body[data-theme-mode="day"] .music-toggle,body[data-theme-mode="day"] .account-toggle{background:#fff;color:#44374e;border-color:rgba(66,45,76,.32)}body[data-theme-mode="day"] .music-toggle[aria-pressed="true"]{background:#963752;color:#fff;border-color:#963752}
 body[data-theme-mode="day"] .settings-section,body[data-theme-mode="day"] .mika-version-option{background:#fff;border-color:rgba(66,45,76,.22);color:#302537}body[data-theme-mode="day"] .mika-version-option[aria-pressed="true"]{background:linear-gradient(120deg,#f9e9f5,#efeaf9);border-color:#a3499a}body[data-theme-mode="day"] .archive-count{color:#85327a;background:#f4e5f3}
 body[data-theme-mode="day"] .sheet h2{color:#302537}
+.art-caption{position:relative;z-index:2;display:inline-flex;align-items:center;gap:6px;width:max-content;max-width:100%;margin:14px 0 0;padding:7px 10px;border:1px solid rgba(255,255,255,.14);border-radius:99px;background:rgba(16,12,36,.78);color:#dfcee8;font-size:10px;line-height:1.25;backdrop-filter:blur(8px)}.art-caption i{flex:none;color:#fb77d9;font-style:normal}
+body[data-theme-mode="day"] .art-caption{display:inline-flex}
+@media(max-width:560px){.art-caption{max-width:100%;margin-top:11px;padding:6px 9px;border-radius:12px;background:rgba(36,23,54,.88);font-size:9px;white-space:normal}}
 @media(prefers-reduced-motion:reduce){.char{animation:none!important}}
 @media(prefers-reduced-motion:reduce){.home-skills.is-shifting .home-skill{animation:none}}
 @media(prefers-reduced-motion:reduce){.home-hero,.stage{scroll-behavior:auto}}
