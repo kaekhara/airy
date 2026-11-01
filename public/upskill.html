@@ -638,7 +638,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
   </div>
 </header>
 
-<aside class="desktop-rail" aria-label="Основная навигация"><a class="rail-brand" href="#novel" aria-label="Upskill Airy — главная"><span>UPSKILL</span><b>— AIRY <i>✦</i></b></a><nav class="rail-links" id="sideNav" aria-label="Разделы"><button type="button" data-tab="novel"><span>⌂</span>Главная</button><button type="button" data-tab="tree"><span>⌘</span>Мои навыки</button><button type="button" data-tab="journal"><span>▤</span>Дневник</button><button type="button" data-tab="ach"><span>♙</span>Профиль и награды</button></nav><div class="rail-footer"><div class="rail-status"><i></i> ТВОЙ ПУТЬ НАЧИНАЕТСЯ ЗДЕСЬ</div><button type="button" id="railAccount">Настроить аккаунт <span>↗</span></button></div></aside>
+<aside class="desktop-rail" aria-label="Основная навигация"><a class="rail-brand" href="#novel" aria-label="Upskill Airy — главная"><span>UPSKILL</span><b>— AIRY <i>✦</i></b></a><nav class="rail-links" id="sideNav" aria-label="Разделы"><span class="rail-indicator" id="railIndicator" aria-hidden="true"></span><button type="button" data-tab="novel"><span>⌂</span>Главная</button><button type="button" data-tab="tree"><span>⌘</span>Мои навыки</button><button type="button" data-tab="journal"><span>▤</span>Дневник</button><button type="button" data-tab="ach"><span>♙</span>Профиль и награды</button></nav><div class="rail-footer"><div class="rail-status"><i></i> ТВОЙ ПУТЬ НАЧИНАЕТСЯ ЗДЕСЬ</div><button type="button" id="railAccount">Настроить аккаунт <span>↗</span></button></div></aside>
 <main class="gutter">
 <div class="wrap">
 
@@ -1217,13 +1217,23 @@ function show(tab,silent){
 const mobileTabs=$('#nav');let scrubPointer=null,navPointerClick=false;
 function syncNavIndicator(tab){
   const indicator=$('#navIndicator'),button=$('button[data-tab="'+tab+'"]',mobileTabs);
-  if(!indicator||!button||!mobileTabs.offsetWidth)return;
-  const navRect=mobileTabs.getBoundingClientRect(),buttonRect=button.getBoundingClientRect();
-  mobileTabs.style.setProperty('--nav-x',(buttonRect.left-navRect.left-mobileTabs.clientLeft)+'px');
-  mobileTabs.style.setProperty('--nav-y',(buttonRect.top-navRect.top-mobileTabs.clientTop)+'px');
-  mobileTabs.style.setProperty('--nav-w',buttonRect.width+'px');
-  mobileTabs.style.setProperty('--nav-h',buttonRect.height+'px');
-  indicator.classList.add('is-ready');
+  if(indicator&&button&&mobileTabs.offsetWidth){
+    const navRect=mobileTabs.getBoundingClientRect(),buttonRect=button.getBoundingClientRect();
+    mobileTabs.style.setProperty('--nav-x',(buttonRect.left-navRect.left-mobileTabs.clientLeft)+'px');
+    mobileTabs.style.setProperty('--nav-y',(buttonRect.top-navRect.top-mobileTabs.clientTop)+'px');
+    mobileTabs.style.setProperty('--nav-w',buttonRect.width+'px');
+    mobileTabs.style.setProperty('--nav-h',buttonRect.height+'px');
+    indicator.classList.add('is-ready');
+  }
+  const rail=$('#sideNav'),railIndicator=$('#railIndicator'),railButton=rail&&$('button[data-tab="'+tab+'"]',rail);
+  if(railIndicator&&railButton&&railButton.getClientRects().length){
+    const railRect=rail.getBoundingClientRect(),railButtonRect=railButton.getBoundingClientRect();
+    rail.style.setProperty('--rail-x',(railButtonRect.left-railRect.left-rail.clientLeft)+'px');
+    rail.style.setProperty('--rail-y',(railButtonRect.top-railRect.top-rail.clientTop)+'px');
+    rail.style.setProperty('--rail-w',railButtonRect.width+'px');
+    rail.style.setProperty('--rail-h',railButtonRect.height+'px');
+    railIndicator.classList.add('is-ready');
+  }
 }
 function scrubTarget(e){const hit=document.elementFromPoint(e.clientX,e.clientY);const button=hit&&hit.closest('button[data-tab]');return button&&mobileTabs.contains(button)?button:null;}
 function scrubPreview(button){mobileTabs.classList.toggle('is-scrubbing',!!button);$$('button[data-tab]',mobileTabs).forEach(b=>b.toggleAttribute('data-scrub-preview',b===button));syncNavIndicator(button?button.dataset.tab:activeTab);}
@@ -2235,6 +2245,24 @@ body[data-theme-mode="day"] .fx{border-color:rgba(118,67,128,.2);background:line
 .auth-link,.account-cancel,.home-link,.journal-reset,.password-control button{border-radius:12px}.auth-tab{border-radius:11px}.account-close,.settings-toggle{border-radius:13px}.prev button{border-radius:50%}.profile-avatar{border-radius:18px}.profile-calendar-day{border-radius:10px}.heat i{border-radius:4px}.e-imgs button,.prev div,.mika-version-option img{border-radius:14px}
 .streak,.account-toggle,.music-toggle{border-radius:999px}.nav-in{border-radius:22px}.nav-indicator{border-radius:17px}
 @media(max-width:520px){.stage{border-radius:21px}.panel,.dialog,.sheet,.home-hero,.journal-overview,.profile-calendar-card{border-radius:18px}}
+/* Desktop navigation keeps its left rail and gets the same glass capsule and glide as mobile. */
+@media(min-width:1100px){
+  #sideNav{position:relative;isolation:isolate;overflow:hidden;gap:5px;padding:8px;border:1px solid rgba(239,220,245,.16);border-radius:20px;background:linear-gradient(145deg,rgba(255,255,255,.095),rgba(255,255,255,.025) 48%,rgba(213,144,218,.055));box-shadow:0 16px 40px rgba(4,3,16,.25),inset 0 1px rgba(255,255,255,.16);backdrop-filter:blur(26px) saturate(1.4);-webkit-backdrop-filter:blur(26px) saturate(1.4)}
+  #sideNav::before{content:"";position:absolute;inset:1px;z-index:0;border-radius:inherit;pointer-events:none;background:linear-gradient(125deg,rgba(255,255,255,.1),transparent 38%,rgba(255,255,255,.025) 67%,transparent)}
+  #sideNav .rail-indicator{position:absolute;z-index:0;left:0;top:0;width:var(--rail-w,0px);height:var(--rail-h,0px);border:1px solid rgba(255,244,250,.25);border-radius:14px;opacity:0;pointer-events:none;transform:translate3d(var(--rail-x,0px),var(--rail-y,0px),0);background:linear-gradient(145deg,rgba(246,175,210,.34),rgba(194,118,186,.18));box-shadow:inset 0 1px rgba(255,255,255,.28),inset 0 0 0 1px rgba(255,231,246,.1),0 6px 20px rgba(195,91,164,.18);backdrop-filter:blur(20px) saturate(1.4);-webkit-backdrop-filter:blur(20px) saturate(1.4);transition:transform .48s cubic-bezier(.22,1,.36,1),width .3s cubic-bezier(.22,1,.36,1),height .3s,opacity .2s}
+  #sideNav .rail-indicator.is-ready{opacity:1}
+  #sideNav button{z-index:1;min-width:0;border:1px solid transparent;border-radius:14px;background:transparent!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;transition:transform .22s cubic-bezier(.2,.8,.2,1),color .2s,border-color .2s}
+  #sideNav button:hover{transform:none;border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.055)!important;color:#fff}
+  #sideNav button[aria-current="page"]{border-color:transparent;background:transparent!important;color:#fff;box-shadow:none!important}
+  #sideNav button>span{flex:none}
+  body[data-theme-mode="day"] #sideNav{border-color:rgba(255,255,255,.78);background:linear-gradient(145deg,rgba(255,255,255,.78),rgba(248,239,251,.58) 48%,rgba(235,222,246,.58));box-shadow:0 14px 34px rgba(55,38,71,.13),inset 0 1px rgba(255,255,255,.96)}
+  body[data-theme-mode="day"] #sideNav::before{background:linear-gradient(125deg,rgba(255,255,255,.62),transparent 38%,rgba(255,255,255,.18) 68%,transparent)}
+  body[data-theme-mode="day"] #sideNav .rail-indicator{border-color:rgba(255,255,255,.92);background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(224,187,220,.6));box-shadow:inset 0 1px rgba(255,255,255,.98),inset 0 0 0 1px rgba(131,66,125,.1),0 6px 18px rgba(98,48,100,.14)}
+  body[data-theme-mode="day"] #sideNav button{color:#584c62}
+  body[data-theme-mode="day"] #sideNav button:hover{border-color:rgba(99,70,113,.12);background:rgba(255,255,255,.38)!important;color:#382b41}
+  body[data-theme-mode="day"] #sideNav button[aria-current="page"]{color:#442c50}
+}
+@media(prefers-reduced-motion:reduce){#sideNav .rail-indicator,#sideNav button{transition:none!important}}
 </style>
 
 </body></html>
