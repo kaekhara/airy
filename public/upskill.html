@@ -822,6 +822,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
     </section>
     <div id="ciFields">
     <div class="practice-selected"><span>Навык</span><b id="ciSelectedName"></b><button class="btn" id="ciChangeSkill" type="button">Изменить</button></div>
+    <p class="practice-xp-note" id="ciXpNote"></p>
     <select id="ciSkill" hidden aria-hidden="true" tabindex="-1"></select>
     <label for="ciText">Что сделано</label>
     <textarea id="ciText" maxlength="600" placeholder="Например: написал триггер AFTER INSERT и проверил его на тестовых данных"></textarea>
@@ -993,7 +994,7 @@ function computeStats(proofs){
   proofs.forEach(p=>{
     const x=+p.xp||0;s.total+=x;s.minutes+=+p.min||0;
     s.xpBy[p.skill]=(s.xpBy[p.skill]||0)+x;
-    const sk=SK[p.skill];if(sk)s.bxp[sk.branch]=(s.bxp[sk.branch]||0)+x;
+    const sk=SK[p.skill];if(sk){const branchXp=p.branchXp==null?x:Math.max(0,Number(p.branchXp)||0);s.bxp[sk.branch]=(s.bxp[sk.branch]||0)+branchXp;}
     const d=s.byDay.get(p.day)||{n:0,xp:0};d.n++;d.xp+=x;s.byDay.set(p.day,d);
     if(!s.lastBy[p.skill]||p.ts>s.lastBy[p.skill])s.lastBy[p.skill]=p.ts;
     if(p.link||(p.imgs&&p.imgs.length))s.proofCount++;
@@ -1538,7 +1539,12 @@ function updateReward(){
   const retainedBonus=ciEditing?(Number(ciEditing.bonus)||0):0,retainedQuest=ciEditing&&ciEditing.quest?10:0;
   if(retainedBonus)parts.push('сохранённый бонус за серию +'+retainedBonus);
   if(retainedQuest)parts.push('бонус выполненного квеста +10');
-  $('#ciReward').textContent=(ciEditing?'После правки: ':'Награда: ')+(base+qb+retainedBonus+retainedQuest)+' XP'+(first?' и бонус за серию':'')+'  ('+parts.join(', ')+')';
+  let streakBonus=0;
+  if(first){const today=dayKey(Date.now()),preview={ts:Date.now(),day:today,skill:f.skill,xp:0,min:0};streakBonus=Math.min(computeStats([preview].concat(store.proofs)).streak,10);if(streakBonus)parts.push('серия +'+streakBonus);}
+  const earned=base+qb+retainedBonus+retainedQuest+streakBonus,selected=SK[f.skill],branch=selected&&TREE.find(item=>item.id===selected.branch);
+  if(selected&&branch){const branchShare=selected.isBranch?earned:Math.round(earned*.4);$('#ciXpNote').textContent=selected.isBranch?'Запись в ветку «'+branch.name+'»: вся награда идёт в её прогресс.':'Навык «'+selected.name+'» получит '+earned+' XP, ветка «'+branch.name+'» — '+branchShare+' XP. Общая награда не уменьшается.';}
+  else $('#ciXpNote').textContent='Опыт начисляется в выбранный навык и его ветку.';
+  $('#ciReward').textContent=(ciEditing?'После правки: ':'Награда: ')+earned+' XP · '+(selected&&selected.isBranch?'ветка +'+earned+' XP':'навык +'+earned+' XP, ветка +'+Math.round(earned*.4)+' XP')+'  ('+parts.join(', ')+')';
 }
 function renderPrev(){
   const box=$('#ciPrev');box.innerHTML='';
@@ -1579,7 +1585,7 @@ $('#ciForm').addEventListener('submit',async e=>{
   err.textContent='';ciBusy=true;const btn=$('#ciSubmit');btn.disabled=true;btn.textContent='Сохраняю…';
   try{
     if(ciEditing){
-      const original=ciEditing,imgs=original.imgs||[],patch={skill:f.skill,text:f.text,min:f.min,link:f.link,xp:xpBase({min:f.min,link:!!f.link,imgs:imgs.length,len:f.text.length})+(Number(original.bonus)||0)+(original.quest?10:0)};
+      const original=ciEditing,imgs=original.imgs||[],xp=xpBase({min:f.min,link:!!f.link,imgs:imgs.length,len:f.text.length})+(Number(original.bonus)||0)+(original.quest?10:0),legacyBranchXp=original.branchXp==null&&original.skill===f.skill,patch={skill:f.skill,text:f.text,min:f.min,link:f.link,xp,branchXp:legacyBranchXp||SK[f.skill].isBranch?xp:Math.round(xp*.4)};
       saveState('saving','Сохраняю…');await store.updateProof(original.id,patch);
       const order={recentBranchIds:promotedBranches(SK[f.skill].branch)};
       try{await store.saveProfile(order);store.profile=Object.assign({},store.profile,order);}catch(orderErr){console.warn('Skill order could not sync',orderErr);}
@@ -1598,6 +1604,7 @@ $('#ciForm').addEventListener('submit',async e=>{
     if(quest){entry.xp+=10;entry.quest=quest.id;}
     const before=S;
     if(!S.byDay.has(entry.day)){const st=computeStats([entry].concat(store.proofs)).streak;entry.bonus=Math.min(st,10);entry.xp+=entry.bonus;}
+    entry.branchXp=SK[f.skill].isBranch?entry.xp:Math.round(entry.xp*.4);
     const after=computeStats([entry].concat(store.proofs));
     saveState('saving','Сохраняю…');await store.addProof(entry);
     if(store.mode==='db'&&!store.proofs.some(p=>p.id===entry.id))store.proofs=[entry].concat(store.proofs);
@@ -2320,6 +2327,32 @@ body[data-theme-mode="day"] .practice-catalog input{background:rgba(255,255,255,
 body[data-theme-mode="day"] .btn:not(.primary),body[data-theme-mode="day"] .choice:not(.primary),body[data-theme-mode="day"] .home-skill-actions button,body[data-theme-mode="day"] .journal-reset{background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(247,243,249,.9));color:#37303f;border-color:rgba(65,52,77,.2);box-shadow:inset 0 1px #fff,0 3px 9px rgba(55,38,71,.055)}body[data-theme-mode="day"] .btn:not(.primary):hover,body[data-theme-mode="day"] .choice:not(.primary):hover{background:#f4eaf3;color:#30243a;border-color:rgba(139,59,126,.38)}body[data-theme-mode="day"] .home-actions .primary,body[data-theme-mode="day"] .btn.primary,body[data-theme-mode="day"] .choice.primary,body[data-theme-mode="day"] #ciSubmit{background:linear-gradient(120deg,#984878,#75408f);color:#fff;border-color:rgba(255,255,255,.65);box-shadow:inset 0 1px rgba(255,255,255,.28),0 7px 18px rgba(99,48,104,.2)}body[data-theme-mode="day"] .home-copy>p{color:#554b5c}body[data-theme-mode="day"] .home-hero{background:radial-gradient(ellipse at 75% 45%,rgba(183,82,175,.11),transparent 42%),linear-gradient(120deg,#faf7fb,#ebe7f2);border-color:rgba(84,63,101,.2);box-shadow:0 14px 38px rgba(78,48,95,.1)}
 @media(max-width:520px){.practice-catalog-list{grid-template-columns:1fr;max-height:46svh}.practice-catalog-item{min-height:56px}.practice-selected{gap:7px}.practice-selected .btn{padding-inline:9px}}
 @media(prefers-reduced-motion:reduce){.practice-catalog-item{transition:none}}
+/* XP breakdown copy and light-mode contrast for every control, especially the check-in sheet. */
+.practice-xp-note{margin:0 0 12px;padding:9px 11px;border-left:3px solid #a75bd4;border-radius:0 11px 11px 0;background:rgba(167,91,212,.09);color:var(--muted);font-size:12px;line-height:1.5}
+body[data-theme-mode="day"]{--ink:#292431;--muted:#5d5665;--line:rgba(54,45,65,.19);--panel-solid:#fff;--card:#fff;color:#292431;background-color:#f1eff4}
+body[data-theme-mode="day"]::before{background:radial-gradient(ellipse at 12% 8%,rgba(240,224,239,.72),transparent 36%),radial-gradient(ellipse at 88% 27%,rgba(222,230,247,.64),transparent 42%),radial-gradient(ellipse at 54% 100%,rgba(247,235,222,.62),transparent 48%),linear-gradient(135deg,#eeedf3,#f5f2f5 52%,#f3efea)}
+body[data-theme-mode="day"] :is(h1,h2,h3,h4,b,strong,label,.page-h,.page-h h2,.sheet h2,.home-copy h1,.home-skill-top b,.home-activity-copy b,.journal-overview h2,.entry,.quest){color:#292431}
+body[data-theme-mode="day"] :is(.muted,.note,.sub,.page-h p,.sheet .sub,.practice-catalog>label,.practice-selected>span,.practice-xp-note,.journal-overview p,.home-copy>p,.home-skill small,.home-skill-foot,.home-activity-copy small,.home-activity-time){color:#5d5665}
+body[data-theme-mode="day"] button:not(.nav button):not(.btn.primary):not(.choice.primary){background:linear-gradient(145deg,#fff,#f8f6fa);color:#342d3b;border-color:rgba(54,45,65,.22);box-shadow:inset 0 1px #fff,0 3px 9px rgba(45,35,58,.065)}
+body[data-theme-mode="day"] button:not(.nav button):not(:disabled):not(.btn.primary):not(.choice.primary):hover{background:#f2eaf3;color:#2c2434;border-color:rgba(126,57,119,.38);box-shadow:0 6px 16px rgba(63,43,75,.1)}
+body[data-theme-mode="day"] button.btn.primary,body[data-theme-mode="day"] button.choice.primary,body[data-theme-mode="day"] #ciSubmit{background:linear-gradient(120deg,#873f78,#6c3c88);color:#fff;border-color:rgba(255,255,255,.72);box-shadow:inset 0 1px rgba(255,255,255,.25),0 7px 18px rgba(91,47,98,.2)}
+body[data-theme-mode="day"] :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea){background:#fff;color:#292431;border-color:rgba(54,45,65,.24);box-shadow:inset 0 1px 2px rgba(37,27,48,.035)}
+body[data-theme-mode="day"] :is(input,textarea)::placeholder{color:#716979;opacity:1}
+body[data-theme-mode="day"] .overlay{background:rgba(38,31,47,.46);backdrop-filter:blur(10px) saturate(.88);-webkit-backdrop-filter:blur(10px) saturate(.88)}
+body[data-theme-mode="day"] .sheet,body[data-theme-mode="day"] #ciForm{background:linear-gradient(155deg,rgba(255,255,255,.99),rgba(248,245,250,.99));color:#292431;border:1px solid rgba(71,53,82,.2);box-shadow:0 26px 76px rgba(38,27,48,.24),inset 0 1px #fff}
+body[data-theme-mode="day"] .sheet :is(label,.sub,.note){color:#534b5b}
+body[data-theme-mode="day"] .chip{background:#fff;color:#433b49;border-color:rgba(54,45,65,.22);box-shadow:0 2px 6px rgba(47,35,57,.05)}
+body[data-theme-mode="day"] .chip[aria-pressed="true"],body[data-theme-mode="day"] .chip.on{background:#754182;color:#fff;border-color:#754182;box-shadow:0 4px 11px rgba(94,53,112,.18)}
+body[data-theme-mode="day"] .practice-catalog input{background:#fff;color:#292431;border-color:rgba(54,45,65,.24)}
+body[data-theme-mode="day"] .practice-catalog-item{background:linear-gradient(145deg,color-mix(in srgb,var(--catalog-color) 8%,#fff),#fff);color:#292431;border-color:color-mix(in srgb,var(--catalog-color) 32%,rgba(54,45,65,.14));box-shadow:0 3px 10px rgba(45,35,58,.055)}
+body[data-theme-mode="day"] .practice-catalog-item small{color:#625a69}
+body[data-theme-mode="day"] .practice-selected{background:linear-gradient(120deg,#fff,#f8f5fa);border-color:rgba(54,45,65,.16);color:#292431}
+body[data-theme-mode="day"] .practice-xp-note{background:#f3edf6;border-left-color:#754182;color:#51465a}
+body[data-theme-mode="day"] .reward{background:#fff8e7;border-color:rgba(127,91,24,.28);color:#634812;line-height:1.55;overflow-wrap:anywhere}
+body[data-theme-mode="day"] .err{color:#a12b45}
+body[data-theme-mode="day"] .home-hero{background:radial-gradient(ellipse at 75% 45%,rgba(177,91,168,.11),transparent 42%),linear-gradient(120deg,#fbf8fc,#ebe8f2);border-color:rgba(70,54,82,.2);box-shadow:0 14px 38px rgba(55,41,66,.1)}
+body[data-theme-mode="day"] .home-copy h1 em{background-image:linear-gradient(100deg,#65318e,#9b357d 72%,#5f3e92)}
+@media(max-width:520px){body[data-theme-mode="day"] .sheet{max-height:calc(100svh - 24px);padding:18px 15px}body[data-theme-mode="day"] .sheet .actions .btn{min-height:44px}}
 </style>
 
 </body></html>
