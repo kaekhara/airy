@@ -644,7 +644,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
 
   <section class="view" id="view-novel" aria-label="Главная">
     <section class="home-hero" aria-labelledby="homeTitle">
-      <div class="home-copy"><span class="home-eyebrow"><i></i> ТВОЁ ПРОСТРАНСТВО РОСТА</span><h1 id="homeTitle" tabindex="-1">С возвращением,<br><em id="homeName">путешественник</em></h1><p>Маленькие шаги каждый день — и однажды ты удивишься, как далеко ушёл.</p><div class="home-actions"><button class="btn primary" id="homeTalk" type="button"><span aria-hidden="true">✦</span> Поговорить с Микой</button><button class="btn home-secondary" id="homePractice" type="button">Записать практику <span aria-hidden="true">↗</span></button></div><span class="art-caption"><i>✦</i> твой спутник в обучении</span></div>
+      <div class="home-copy"><span class="home-eyebrow"><i></i> ТВОЁ ПРОСТРАНСТВО РОСТА</span><h1 id="homeTitle" tabindex="-1">С возвращением,<br><em id="homeName">путешественник</em></h1><p id="homeDailyPhrase">Маленькие шаги каждый день — и однажды ты удивишься, как далеко ушёл.</p><div class="home-actions"><button class="btn primary" id="homeTalk" type="button"><span aria-hidden="true">✦</span> Поговорить с Микой</button><button class="btn home-secondary" id="homePractice" type="button">Записать практику <span aria-hidden="true">↗</span></button></div><span class="art-caption"><i>✦</i> твой спутник в обучении</span></div>
       <div class="home-art"><div class="art-glow"></div><img src="images/airy/mika-hero.webp" alt="Мика на фоне неонового вечернего города" fetchpriority="high"></div>
     </section>
     <section class="home-progress panel" aria-label="Уровень и опыт"><div class="home-level"><span>УРОВЕНЬ</span><b id="homeLevel">1</b></div><div class="home-xp"><div class="home-xp-title"><b id="homeRank">Новичок</b><span><strong id="homeXp">0</strong> XP</span></div><div class="home-xp-track"><i id="homeXpFill"></i></div><small id="homeXpNext">0 / 60 опыта до следующего уровня</small></div><div class="home-stars"><span aria-hidden="true">✦</span><b id="homePoints">0</b><small>ОПЫТА</small></div></section>
@@ -815,8 +815,14 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
   <form class="sheet" id="ciForm" role="dialog" aria-modal="true" aria-labelledby="ciTitle" novalidate>
     <h2 id="ciTitle">Запись дня</h2>
     <p class="sub">Что получилось сегодня и чем это доказать.</p>
-    <label for="ciSkill">Навык</label>
-    <select id="ciSkill"></select>
+    <section class="practice-catalog" id="ciCatalog" hidden aria-label="Каталог навыков">
+      <label for="ciCatalogSearch">Выбери навык</label>
+      <input id="ciCatalogSearch" type="search" placeholder="Найти навык…" autocomplete="off">
+      <div class="practice-catalog-list" id="ciCatalogList"></div>
+    </section>
+    <div id="ciFields">
+    <div class="practice-selected"><span>Навык</span><b id="ciSelectedName"></b><button class="btn" id="ciChangeSkill" type="button">Изменить</button></div>
+    <select id="ciSkill" hidden aria-hidden="true" tabindex="-1"></select>
     <label for="ciText">Что сделано</label>
     <textarea id="ciText" maxlength="600" placeholder="Например: написал триггер AFTER INSERT и проверил его на тестовых данных"></textarea>
     <div class="row2">
@@ -832,6 +838,7 @@ body[data-theme-mode="day"] .nav button[aria-current="page"],body[data-theme-mod
     <div class="reward" id="ciReward"></div>
     <p class="err" id="ciErr" role="alert"></p>
     <div class="actions"><button type="button" class="btn" id="ciCancel">Отмена</button><button type="submit" class="btn primary" id="ciSubmit">Записать в дневник</button></div>
+    </div>
   </form>
 </div>
 
@@ -1190,6 +1197,22 @@ function renderDashboard(){
   if(!S)return;
   const name=(store.profile&&store.profile.name)||(store.accountUser&&store.accountUser.displayName)||'';
   $('#homeName').textContent=name||'путешественник';
+  const dailyPhrases=[
+    'Не обязательно переворачивать весь день. Один честный шаг уже двигает тебя вперёд.',
+    'Пятнадцать минут практики — тоже вклад. Не обесценивай маленькое.',
+    'Сегодня можно просто продолжить с того места, где остановился.',
+    'Путь складывается не из рывков, а из возвращений. Хорошо, что ты снова здесь.',
+    'Выбери одну вещь, которую давно хотел понять, и разберись хотя бы с основой.',
+    'Даже короткая заметка о практике помогает увидеть, как ты растёшь.',
+    'Не сравнивай свой темп с чужим. Твоя следующая ступень ближе, чем кажется.',
+    'Если сил мало, снизь планку, а не бросай путь. Один маленький шаг — уже победа.',
+    'Повтори знакомое или попробуй новое — оба варианта считаются движением.',
+    'Тебе не нужно быть готовым на сто процентов, чтобы начать.',
+    'Сегодняшний прогресс может быть тихим. Это всё равно прогресс.',
+    'Возьми одну задачу и доведи её до маленького, но ясного результата.'
+  ];
+  const today=dayKey(Date.now()),phraseSeed=Number(today.replaceAll('-',''));
+  $('#homeDailyPhrase').textContent=dailyPhrases[phraseSeed%dailyPhrases.length];
   const tl=S.tl;$('#homeLevel').textContent=tl.L;$('#homeRank').textContent=rankOf(tl.L);$('#homePoints').textContent=num(S.total);$('#homeXp').textContent=num(S.total);
   $('#homeXpFill').style.width=Math.round(tl.frac*100)+'%';$('#homeXpNext').textContent=tl.L>=10?'Максимальный уровень достигнут':num(S.total-tl.lo)+' / '+num(tl.hi-tl.lo)+' опыта до следующего уровня';
   const icons=['✥','◉','⌘','✿','⌁','✧'];
@@ -1460,16 +1483,42 @@ function fillSkillSelect(sel){
   el.value=ok?cur:TREE[0].id;
 }
 let ciQuest=null;
+let ciCatalogReturnFocus=null;
+function renderPracticeCatalog(query=''){
+  const list=$('#ciCatalogList'),q=String(query).trim().toLocaleLowerCase('ru');
+  const choices=[];
+  TREE.forEach(branch=>{
+    choices.push({id:branch.id,name:branch.name,branch:branch.name,kind:'Ветка навыка',color:branch.c});
+    branch.leaves.forEach(leaf=>{if(S.unlocked.has(leaf.id))choices.push({id:leaf.id,name:leaf.name,branch:branch.name,kind:'Навык',color:branch.c});});
+  });
+  const filtered=choices.filter(item=>!q||`${item.name} ${item.branch} ${item.kind}`.toLocaleLowerCase('ru').includes(q));
+  list.innerHTML=filtered.length?filtered.map(item=>'<button type="button" class="practice-catalog-item" data-catalog-skill="'+esc(item.id)+'" style="--catalog-color:'+esc(item.color)+'"><span class="practice-catalog-mark" aria-hidden="true">✦</span><span><b>'+esc(item.name)+'</b><small>'+esc(item.kind)+' · '+esc(item.branch)+'</small></span><span class="practice-catalog-arrow" aria-hidden="true">↗</span></button>').join(''):'<p class="practice-catalog-empty">Ничего не найдено. Попробуй другое название.</p>';
+}
+function showPracticeCatalog(){
+  $('#ciFields').hidden=true;$('#ciCatalog').hidden=false;$('#ciTitle').textContent='Выбери, что практиковал';$('#ciCatalogSearch').value='';renderPracticeCatalog();
+  setTimeout(()=>$('#ciCatalogSearch').focus(),20);
+}
+function selectCatalogSkill(id){
+  if(!SK[id]||(!SK[id].isBranch&&!S.unlocked.has(id)))return;
+  $('#ciSkill').value=id;$('#ciSelectedName').textContent=SK[id].name;$('#ciCatalog').hidden=true;$('#ciFields').hidden=false;
+  $('#ciTitle').textContent=ciEditing?'Изменить запись':ciQuest?'Квест':'Запись дня';updateReward();setTimeout(()=>$('#ciText').focus(),20);
+}
 function openCheckin(pre,quest,editing){
   if(!S)return;
   ciQuest=quest||null;ciEditing=editing||null;
   fillSkillSelect((editing&&editing.skill)||pre||(store.proofs[0]&&store.proofs[0].skill)||'cyber');
+  $('#ciSelectedName').textContent=SK[$('#ciSkill').value]?.name||'Навык';
   $('#ciTitle').textContent=ciEditing?'Изменить запись':ciQuest?'Квест':'Запись дня';
   $('#ciText').value=ciEditing?ciEditing.text:ciQuest?('Квест «'+ciQuest.title+'»: '):'';$('#ciMin').value=ciEditing?ciEditing.min:30;$('#ciLink').value=ciEditing?ciEditing.link||'':'';$('#ciFile').value='';ciImgs=[];renderPrev();$('#ciErr').textContent='';
   $('#ciFile').hidden=!!ciEditing;document.querySelector('label[for="ciFile"]').hidden=!!ciEditing;$('#ciEditNote').hidden=!ciEditing;
   setChips();updateReward();$('#ciSubmit').disabled=false;$('#ciSubmit').textContent=ciEditing?'Сохранить изменения':'Записать в дневник';
-  $('#ciOverlay').hidden=false;setTimeout(()=>$('#ciText').focus(),30);
+  $('#ciOverlay').hidden=false;
+  if(!pre&&!quest&&!editing)showPracticeCatalog();else{$('#ciCatalog').hidden=true;$('#ciFields').hidden=false;$('#ciTitle').textContent=ciEditing?'Изменить запись':ciQuest?'Квест':'Запись дня';setTimeout(()=>$('#ciText').focus(),30);}
 }
+$('#ciCatalogSearch').addEventListener('input',e=>renderPracticeCatalog(e.target.value));
+$('#ciCatalogSearch').addEventListener('keydown',e=>{if(e.key==='Enter')e.preventDefault();});
+$('#ciCatalogList').addEventListener('click',e=>{const item=e.target.closest('[data-catalog-skill]');if(item)selectCatalogSkill(item.dataset.catalogSkill);});
+$('#ciChangeSkill').addEventListener('click',showPracticeCatalog);
 function closeCheckin(){$('#ciOverlay').hidden=true;ciImgs.forEach(i=>URL.revokeObjectURL(i.url));ciImgs=[];ciEditing=null;ciQuest=null;$('#ciFile').hidden=false;document.querySelector('label[for="ciFile"]').hidden=false;$('#ciEditNote').hidden=true;}
 function setChips(){
   const box=$('#ciChips');box.innerHTML='';const cur=+$('#ciMin').value;
@@ -2263,6 +2312,14 @@ body[data-theme-mode="day"] .fx{border-color:rgba(118,67,128,.2);background:line
   body[data-theme-mode="day"] #sideNav button[aria-current="page"]{color:#442c50}
 }
 @media(prefers-reduced-motion:reduce){#sideNav .rail-indicator,#sideNav button{transition:none!important}}
+/* Practice picker: a searchable, compact catalog for generic “log practice” actions. */
+.practice-catalog{margin:16px 0 2px}.practice-catalog[hidden]{display:none!important}.practice-catalog>label{display:block;margin:0 0 8px;color:var(--muted);font-size:12px;font-weight:800}.practice-catalog input{width:100%;min-height:46px;padding:11px 14px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.06);color:var(--ink);font:inherit;outline:none}.practice-catalog input:focus-visible{border-color:#dd67c7;box-shadow:0 0 0 3px rgba(221,103,199,.18)}.practice-catalog-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;max-height:min(48svh,390px);overflow:auto;margin-top:12px;padding:2px 4px 4px 2px;overscroll-behavior:contain}.practice-catalog-item{display:grid;grid-template-columns:34px minmax(0,1fr) 18px;align-items:center;gap:10px;min-width:0;min-height:62px;padding:10px;border:1px solid color-mix(in srgb,var(--catalog-color) 34%,var(--line));border-radius:15px;background:linear-gradient(145deg,color-mix(in srgb,var(--catalog-color) 12%,var(--panel-solid)),var(--panel-solid));color:var(--ink);text-align:left;cursor:pointer;transition:transform .18s,border-color .18s,box-shadow .18s}.practice-catalog-item:hover{transform:translateY(-2px);border-color:var(--catalog-color);box-shadow:0 8px 20px color-mix(in srgb,var(--catalog-color) 14%,transparent)}.practice-catalog-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:11px;background:color-mix(in srgb,var(--catalog-color) 18%,transparent);color:var(--catalog-color)}.practice-catalog-item b,.practice-catalog-item small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.practice-catalog-item b{font-size:12px}.practice-catalog-item small{margin-top:4px;color:var(--muted);font-size:10px}.practice-catalog-arrow{color:var(--catalog-color)}.practice-catalog-empty{grid-column:1/-1;padding:18px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);text-align:center}.practice-selected{display:flex;align-items:center;gap:10px;margin:12px 0 16px;padding:10px 12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.045)}.practice-selected>span{color:var(--muted);font-size:11px}.practice-selected>b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}.practice-selected .btn{min-height:34px;padding:6px 11px;font-size:11px}.practice-selected+#ciSkill[hidden]{display:none!important}#ciFields[hidden]{display:none!important}
+body[data-theme-mode="day"]{--ink:#292431;--muted:#625b69;--line:rgba(65,52,77,.17);--panel:rgba(255,255,255,.88);--panel-solid:#fbf9fc;--card:rgba(255,255,255,.82);background-color:#f2eff5}
+body[data-theme-mode="day"]::before{background:radial-gradient(ellipse at 12% 10%,rgba(244,222,237,.75),transparent 36%),radial-gradient(ellipse at 88% 28%,rgba(224,229,250,.68),transparent 42%),radial-gradient(ellipse at 54% 100%,rgba(247,232,215,.7),transparent 48%),linear-gradient(135deg,#eceaf2,#f5f1f5 52%,#f3eee9)}
+body[data-theme-mode="day"] .practice-catalog input{background:rgba(255,255,255,.95);color:#292431;border-color:rgba(65,52,77,.22)}body[data-theme-mode="day"] .practice-catalog-item{background:linear-gradient(145deg,color-mix(in srgb,var(--catalog-color) 9%,#fff),#fff);color:#292431;box-shadow:0 3px 10px rgba(55,38,71,.05)}body[data-theme-mode="day"] .practice-selected{background:rgba(255,255,255,.8);color:#292431}
+body[data-theme-mode="day"] .btn:not(.primary),body[data-theme-mode="day"] .choice:not(.primary),body[data-theme-mode="day"] .home-skill-actions button,body[data-theme-mode="day"] .journal-reset{background:linear-gradient(145deg,rgba(255,255,255,.95),rgba(247,243,249,.9));color:#37303f;border-color:rgba(65,52,77,.2);box-shadow:inset 0 1px #fff,0 3px 9px rgba(55,38,71,.055)}body[data-theme-mode="day"] .btn:not(.primary):hover,body[data-theme-mode="day"] .choice:not(.primary):hover{background:#f4eaf3;color:#30243a;border-color:rgba(139,59,126,.38)}body[data-theme-mode="day"] .home-actions .primary,body[data-theme-mode="day"] .btn.primary,body[data-theme-mode="day"] .choice.primary,body[data-theme-mode="day"] #ciSubmit{background:linear-gradient(120deg,#984878,#75408f);color:#fff;border-color:rgba(255,255,255,.65);box-shadow:inset 0 1px rgba(255,255,255,.28),0 7px 18px rgba(99,48,104,.2)}body[data-theme-mode="day"] .home-copy>p{color:#554b5c}body[data-theme-mode="day"] .home-hero{background:radial-gradient(ellipse at 75% 45%,rgba(183,82,175,.11),transparent 42%),linear-gradient(120deg,#faf7fb,#ebe7f2);border-color:rgba(84,63,101,.2);box-shadow:0 14px 38px rgba(78,48,95,.1)}
+@media(max-width:520px){.practice-catalog-list{grid-template-columns:1fr;max-height:46svh}.practice-catalog-item{min-height:56px}.practice-selected{gap:7px}.practice-selected .btn{padding-inline:9px}}
+@media(prefers-reduced-motion:reduce){.practice-catalog-item{transition:none}}
 </style>
 
 </body></html>
