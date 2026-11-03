@@ -1179,6 +1179,33 @@ function renderHud(){
   const description=next?`Серия ${days} ${dayWord(days)} · ещё ${next.at-days} ${dayWord(next.at-days)} до стадии «${next.name}»`:`Серия ${days} ${dayWord(days)} · высшая стадия сакуры`;
   streak.dataset.streakTier=current.tier;streak.title=description;streak.setAttribute('aria-label',description);
 }
+function animatePracticeProgress(before,after,entry){
+  if(REDUCED)return;
+  const xp=Math.max(0,(Number(after&&after.total)||0)-(Number(before&&before.total)||0));
+  if(!xp)return;
+  const bar=$('.hud .bar'),xpText=$('#xpText'),lvl=$('#lvl');
+  [bar,xpText].forEach(el=>{if(!el)return;el.classList.remove('xp-earned');void el.offsetWidth;el.classList.add('xp-earned');setTimeout(()=>el.classList.remove('xp-earned'),850);});
+  if(before&&after&&before.tl&&after.tl&&after.tl.L>before.tl.L){
+    const from=Math.max(0,Math.min(1,before.tl.frac)),to=Math.max(0,Math.min(1,after.tl.frac)),seq=(lvl._ringSeq||0)+1;lvl._ringSeq=seq;
+    const draw=(start,a,b,duration,done)=>{const frame=now=>{if(lvl._ringSeq!==seq)return;const p=Math.min(1,(now-start)/duration),ease=1-Math.pow(1-p,3);lvl.style.setProperty('--p',(a+(b-a)*ease)*100);if(p<1)requestAnimationFrame(frame);else if(done)done();};requestAnimationFrame(frame);};
+    lvl.style.setProperty('--p',from*100);draw(performance.now(),from,1,500);
+    setTimeout(()=>{if(lvl._ringSeq!==seq)return;lvl.style.setProperty('--p',0);draw(performance.now(),0,to,250);},530);
+    lvl.classList.remove('level-earned');void lvl.offsetWidth;lvl.classList.add('level-earned');setTimeout(()=>lvl.classList.remove('level-earned'),900);
+  }
+  const branchId=SK[entry&&entry.skill]&&SK[entry.skill].branch;
+  const branchCard=branchId?document.querySelector('.home-skill[data-branch-id="'+branchId+'"]'):null;
+  if(branchCard){branchCard.classList.remove('practice-earned');void branchCard.offsetWidth;branchCard.classList.add('practice-earned');setTimeout(()=>branchCard.classList.remove('practice-earned'),900);}
+  if(before&&after&&after.streak>before.streak){
+    const streak=$('.streak'),icon=$('.streak .sakura-streak');
+    streak.classList.remove('streak-bloom');icon.classList.remove('sakura-bloom');void streak.offsetWidth;
+    streak.classList.add('streak-bloom');icon.classList.add('sakura-bloom');
+    const vectors=[[-13,-17],[-5,-23],[6,-21],[14,-13]];
+    vectors.forEach(([x,y],i)=>{const petal=document.createElement('i');petal.className='streak-petal';petal.setAttribute('aria-hidden','true');petal.style.setProperty('--dx',x+'px');petal.style.setProperty('--dy',y+'px');petal.style.setProperty('--delay',(i*45)+'ms');streak.appendChild(petal);setTimeout(()=>petal.remove(),1150+i*45);});
+    setTimeout(()=>{streak.classList.remove('streak-bloom');icon.classList.remove('sakura-bloom');},1050);
+  }
+  const earned=after&&after.ach&&before&&before.ach?after.ach.filter(id=>!before.ach.includes(id)):[];
+  earned.forEach((id,i)=>{const badge=document.querySelector('.badge[data-achievement="'+id+'"]');if(!badge)return;badge.style.setProperty('--earned-delay',Math.min(i,4)*90+'ms');badge.classList.remove('just-earned');void badge.offsetWidth;badge.classList.add('just-earned');setTimeout(()=>{badge.classList.remove('just-earned');badge.style.removeProperty('--earned-delay');},1100+i*90);});
+}
 
 function promotedBranches(branchId,profile=store.profile){
   const previous=Array.isArray(profile?.recentBranchIds)?profile.recentBranchIds:[];
@@ -1615,7 +1642,7 @@ $('#ciForm').addEventListener('submit',async e=>{
     closeCheckin();
     const lines=afterLines(entry,before,after);
     if(quest)lines.splice(1,0,{expr:'proud',text:'Квест «'+quest.title+'» выполнен. Бонус +10 XP.'});
-    show('novel');play(lines);
+    show('novel');animatePracticeProgress(before,after,entry);play(lines);
   }catch(e3){saveState('error','Не сохранено');err.textContent=('Не удалось сохранить: '+((e3&&e3.message)||'ошибка')).slice(0,180);}
   finally{ciBusy=false;btn.disabled=false;btn.textContent='Записать в дневник';}
 });
@@ -1973,7 +2000,7 @@ function renderAwards(){
   const got=new Set(S.ach);
   $('#achCount').textContent='Получено '+got.size+' из '+ACH.length;
   renderNextAwards(S,got);
-  $('#badges').innerHTML=ACH.map(a=>'<div class="badge'+(got.has(a.id)?' on':'')+'"><div class="gl" aria-hidden="true">'+(got.has(a.id)?a.g:'?')+'</div><b>'+esc(a.n)+'</b><span>'+esc(a.d)+'</span></div>').join('');
+  $('#badges').innerHTML=ACH.map(a=>'<div class="badge'+(got.has(a.id)?' on':'')+'" data-achievement="'+esc(a.id)+'"><div class="gl" aria-hidden="true">'+(got.has(a.id)?a.g:'?')+'</div><b>'+esc(a.n)+'</b><span>'+esc(a.d)+'</span></div>').join('');
 }
 function renderProfile(){
   const profile=store.profile||{},user=store.accountUser,profileName=profile.name||(user&&user.displayName)||'';
@@ -2353,6 +2380,25 @@ body[data-theme-mode="day"] .err{color:#a12b45}
 body[data-theme-mode="day"] .home-hero{background:radial-gradient(ellipse at 75% 45%,rgba(177,91,168,.11),transparent 42%),linear-gradient(120deg,#fbf8fc,#ebe8f2);border-color:rgba(70,54,82,.2);box-shadow:0 14px 38px rgba(55,41,66,.1)}
 body[data-theme-mode="day"] .home-copy h1 em{background-image:linear-gradient(100deg,#65318e,#9b357d 72%,#5f3e92)}
 @media(max-width:520px){body[data-theme-mode="day"] .sheet{max-height:calc(100svh - 24px);padding:18px 15px}body[data-theme-mode="day"] .sheet .actions .btn{min-height:44px}}
+/* Small reward feedback: xp fill, level ring, sakura streak and newly unlocked badges. */
+.bar.xp-earned i{animation:xp-shimmer .82s ease both}.xptext.xp-earned{animation:xp-label .82s ease both}
+.lvl.level-earned{animation:level-earned .84s cubic-bezier(.2,.85,.25,1) both}
+.home-skill.practice-earned{animation:skill-earned .82s ease both}
+.streak{position:relative}.streak.streak-bloom{animation:streak-bloom .9s cubic-bezier(.2,.85,.25,1) both}.streak .sakura-streak.sakura-bloom{animation:sakura-bloom .9s cubic-bezier(.2,.85,.25,1) both}
+.streak-petal{position:absolute;left:15px;top:12px;z-index:2;width:5px;height:8px;border-radius:80% 15% 75% 20%;background:var(--sakura);box-shadow:0 0 5px var(--sakura-glow);pointer-events:none;animation:sakura-petal 1.05s cubic-bezier(.16,.75,.3,1) var(--delay,0ms) both}
+.badge.just-earned{animation:badge-earned .82s cubic-bezier(.2,.85,.25,1) var(--earned-delay,0ms) both}
+.fx[data-kind="award"].go{animation:award-glass 2.8s ease both}
+@keyframes xp-shimmer{0%{filter:brightness(1)}35%{filter:brightness(1.55) drop-shadow(0 0 7px rgba(255,203,135,.68))}100%{filter:brightness(1)}}
+@keyframes xp-label{0%,100%{opacity:1}35%{color:var(--gold);text-shadow:0 0 10px rgba(255,203,135,.48)}}
+@keyframes level-earned{0%,100%{transform:scale(1);filter:brightness(1)}30%{transform:scale(1.13);filter:brightness(1.3);box-shadow:0 0 0 7px rgba(236,133,202,.12),0 0 26px rgba(236,133,202,.42)}65%{transform:scale(.98)}}
+@keyframes skill-earned{0%,100%{filter:none}35%{filter:brightness(1.16);box-shadow:0 0 0 2px rgba(236,133,202,.28),0 12px 34px rgba(7,5,9,.18)}}
+@keyframes streak-bloom{0%,100%{transform:scale(1)}32%{transform:scale(1.14);box-shadow:0 0 0 6px rgba(240,142,172,.13),0 0 24px var(--sakura-glow)}}
+@keyframes sakura-bloom{0%,100%{transform:rotate(0) scale(1)}40%{transform:rotate(-22deg) scale(1.32)}75%{transform:rotate(8deg) scale(.96)}}
+@keyframes sakura-petal{0%{opacity:0;transform:translate(0,0) rotate(0) scale(.5)}15%{opacity:.95}100%{opacity:0;transform:translate(var(--dx),var(--dy)) rotate(210deg) scale(.35)}}
+@keyframes badge-earned{0%{transform:translateY(5px) scale(.96)}40%{transform:translateY(-3px) scale(1.035);box-shadow:0 0 0 3px rgba(238,187,123,.18),0 12px 30px rgba(7,5,9,.18)}100%{transform:translateY(0) scale(1)}}
+@keyframes award-glass{0%{opacity:0;transform:translate(-50%,14px) scale(.9) rotate(-2deg)}12%{opacity:1;transform:translate(-50%,0) scale(1.025) rotate(0)}20%{transform:translate(-50%,0) scale(1)}78%{opacity:1}100%{opacity:0;transform:translate(-50%,-4px) scale(.99)}}
+body[data-theme-mode="day"] .streak-petal{--sakura-glow:rgba(166,59,91,.28)}
+@media(prefers-reduced-motion:reduce){.xp-earned,.level-earned,.practice-earned,.streak-bloom,.sakura-bloom,.streak-petal,.badge.just-earned,.fx[data-kind="award"].go{animation:none!important}.streak-petal{display:none!important}}
 </style>
 
 </body></html>
