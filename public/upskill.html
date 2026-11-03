@@ -1345,8 +1345,6 @@ function getMikaSprite(sprite){if(!mikaPreloaded.has(sprite)){const image=new Im
 function setExpr(e){
   curExpr=EXPRS.includes(e)?e:'think';
   const m=$('#mika'),holder=$('.char'),stage=$('#stage');
-  let hairLayer=holder?.querySelector('.mika-hair-sway');
-  if(holder&&m&&!hairLayer){hairLayer=new Image();hairLayer.className='mika-hair-sway';hairLayer.alt='';hairLayer.setAttribute('aria-hidden','true');hairLayer.draggable=false;hairLayer.hidden=true;holder.append(hairLayer);}
   holder?.setAttribute('data-expression',curExpr);
   if(!m||!stage)return;
   const request=++spriteRequest,version=currentMikaVersion(),sprite=(MIKA_SPRITES[version]&&MIKA_SPRITES[version][curExpr])||MIKA_SPRITES.new.idle;
@@ -1357,7 +1355,6 @@ function setExpr(e){
   const swap=()=>{
     if(request!==spriteRequest||!mikaProfileReady||!image.naturalWidth)return;
     m.src=next;
-    if(hairLayer){hairLayer.hidden=version!=='new';if(version==='new')hairLayer.src=next;}
     stage.dataset.spriteVersion=version;
     m.classList.add('sprite-ready');m.style.visibility='visible';m.style.opacity='1';
   };
@@ -2261,13 +2258,6 @@ body[data-theme-mode="day"] .art-caption{display:inline-flex}
 @media(max-width:560px){.art-caption{max-width:100%;margin-top:11px;padding:6px 9px;border-radius:12px;background:rgba(36,23,54,.88);font-size:9px;white-space:normal}}
 @media(prefers-reduced-motion:reduce){.char{animation:none!important}}
 
-/* New Mika: a restrained 2.5D sway on the rear ponytail only. The source sprite
-   stays untouched underneath; a feathered duplicate keeps the split invisible. */
-.char .mika-hair-sway{position:absolute;z-index:1;left:50%;bottom:0;width:auto;height:100%;max-width:none;object-fit:contain;object-position:center bottom;pointer-events:none;user-select:none;opacity:.32;transform:translateX(-50%);transform-origin:80% 23%;-webkit-mask-image:radial-gradient(ellipse 17% 22% at 80% 23%,#000 34%,rgba(0,0,0,.88) 58%,rgba(0,0,0,.42) 78%,transparent 98%);mask-image:radial-gradient(ellipse 17% 22% at 80% 23%,#000 34%,rgba(0,0,0,.88) 58%,rgba(0,0,0,.42) 78%,transparent 98%);animation:mika-ponytail-sway 6.4s ease-in-out infinite;will-change:transform}
-.char .mika-hair-sway[hidden]{display:none!important}
-.stage[data-sprite-version="old"] .char .mika-hair-sway{animation:none!important}
-@keyframes mika-ponytail-sway{0%,100%{transform:translateX(calc(-50% - 3px)) translateY(1px) rotate(-1deg)}50%{transform:translateX(calc(-50% + 3px)) translateY(-1px) rotate(1deg)}}
-@media(prefers-reduced-motion:reduce){.char .mika-hair-sway{animation:none!important;will-change:auto}}
 @media(prefers-reduced-motion:reduce){.home-skills.is-shifting .home-skill{animation:none}}
 @media(prefers-reduced-motion:reduce){.home-hero,.stage{scroll-behavior:auto}}
 /* iOS-inspired glass tab bar and a more deliberate section transition. */
