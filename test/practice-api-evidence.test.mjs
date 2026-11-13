@@ -100,6 +100,7 @@ test('an arbitrary attachment ID does not award the image XP bonus', async () =>
   assert.equal(observed.imageCount, 0);
   const proof = services.db.documents.get('data/users/user-1/profile/proofs/event_event-00000002');
   assert.equal(proof.xp, 20);
+  assert.equal(Object.hasOwn(proof, 'quest'), false, 'Firestore must not receive an undefined quest field');
 });
 
 test('practice API rejects an overdue personal quest before writing practice or XP', async () => {

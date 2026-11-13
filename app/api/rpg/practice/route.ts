@@ -214,7 +214,8 @@ export async function POST(request: Request) {
       const xp = practiceXp({ minutes, hasLink: Boolean(link), imageCount: evidenceImageCount, textLength: text.length, difficulty, questBonus, streakBonus });
       const entry = {
         eventId, ts: now, day, h: localDate.getUTCHours(), utcOffsetMinutes: offset,
-        skill: skillId, text, min: minutes, link, imgs, quest: questId || undefined,
+        skill: skillId, text, min: minutes, link, imgs,
+        ...(questId ? { quest: questId } : {}),
         bonus: streakBonus, xp, branchXp: isBranch ? xp : Math.round(xp * 0.4),
       };
       const nextSummary = addProofToRpgSummary(summary, entry, profile, {
