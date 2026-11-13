@@ -9,7 +9,7 @@ window.UPSKILL_FIREBASE_CONFIG_PROMISE = fetch('/api/firebase-config', { cache: 
     window.UPSKILL_SERVER_FEATURES = serverFeatures && typeof serverFeatures === 'object'
       ? {
         rpg: serverFeatures.rpg === true,
-        rpgStatus: ['ready', 'missing', 'invalid'].includes(serverFeatures.rpgStatus) ? serverFeatures.rpgStatus : 'missing',
+        rpgStatus: ['ready', 'missing', 'invalid-json', 'missing-fields', 'invalid-email', 'invalid-private-key', 'project-mismatch'].includes(serverFeatures.rpgStatus) ? serverFeatures.rpgStatus : 'missing',
         ai: serverFeatures.ai === true,
       }
       : null;

@@ -1,6 +1,6 @@
 type ServerFeatures = {
   rpg: boolean;
-  rpgStatus: 'ready' | 'missing' | 'invalid';
+  rpgStatus: 'ready' | 'missing' | 'invalid-json' | 'missing-fields' | 'invalid-email' | 'invalid-private-key' | 'project-mismatch';
   ai: boolean;
 };
 
@@ -13,17 +13,21 @@ export function getServerFeatures(serviceAccountJson: unknown, geminiApiKey: unk
 
   try {
     const value: unknown = JSON.parse(serviceAccountJson);
-    if (!value || typeof value !== 'object' || Array.isArray(value)) return { rpg: false, rpgStatus: 'invalid', ai };
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return { rpg: false, rpgStatus: 'missing-fields', ai };
     const account = value as { project_id?: unknown; client_email?: unknown; private_key?: unknown };
     const expectedProjectId = typeof firebaseProjectId === 'string' ? firebaseProjectId.trim() : '';
-    const validFields = typeof account.project_id === 'string' && account.project_id.length > 0
-      && typeof account.client_email === 'string' && account.client_email.includes('@')
-      && typeof account.private_key === 'string'
-      && /-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]+-----END (?:RSA )?PRIVATE KEY-----/.test(account.private_key);
-    const matchesProject = !expectedProjectId || account.project_id === expectedProjectId;
-    const ready = validFields && matchesProject;
-    return { rpg: ready, rpgStatus: ready ? 'ready' : 'invalid', ai };
+    if (typeof account.project_id !== 'string' || !account.project_id.trim()
+      || typeof account.client_email !== 'string' || !account.client_email.trim()
+      || typeof account.private_key !== 'string' || !account.private_key.trim()) {
+      return { rpg: false, rpgStatus: 'missing-fields', ai };
+    }
+    if (!account.client_email.includes('@')) return { rpg: false, rpgStatus: 'invalid-email', ai };
+    if (!/-----BEGIN (?:RSA )?PRIVATE KEY-----[\s\S]+-----END (?:RSA )?PRIVATE KEY-----/.test(account.private_key)) {
+      return { rpg: false, rpgStatus: 'invalid-private-key', ai };
+    }
+    if (expectedProjectId && account.project_id !== expectedProjectId) return { rpg: false, rpgStatus: 'project-mismatch', ai };
+    return { rpg: true, rpgStatus: 'ready', ai };
   } catch {
-    return { rpg: false, rpgStatus: 'invalid', ai };
+    return { rpg: false, rpgStatus: 'invalid-json', ai };
   }
 }

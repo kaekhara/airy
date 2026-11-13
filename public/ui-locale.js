@@ -361,6 +361,21 @@
   let observer = null;
   let activeLocale = 'ru';
 
+  Object.assign(dictionaries.en, {
+    'FIREBASE_SERVICE_ACCOUNT_JSON должен содержать полный корректный JSON.':'FIREBASE_SERVICE_ACCOUNT_JSON must contain the complete valid JSON document.',
+    'В JSON service account должны быть поля project_id, client_email и private_key.':'The service-account JSON must include project_id, client_email, and private_key.',
+    'Поле client_email в service account должно содержать адрес сервисного аккаунта.':'The service-account client_email must be a service-account email address.',
+    'Поле private_key должно содержать полный PEM-блок BEGIN PRIVATE KEY и END PRIVATE KEY.':'The private_key field must contain the full PEM block, from BEGIN PRIVATE KEY through END PRIVATE KEY.',
+    'project_id в service account должен совпадать с NEXT_PUBLIC_FIREBASE_PROJECT_ID.':'The service-account project_id must match NEXT_PUBLIC_FIREBASE_PROJECT_ID.'
+  });
+  Object.assign(dictionaries.kk, {
+    'FIREBASE_SERVICE_ACCOUNT_JSON должен содержать полный корректный JSON.':'FIREBASE_SERVICE_ACCOUNT_JSON толық әрі дұрыс JSON құжатын қамтуы керек.',
+    'В JSON service account должны быть поля project_id, client_email и private_key.':'Service account JSON ішінде project_id, client_email және private_key өрістері болуы керек.',
+    'Поле client_email в service account должно содержать адрес сервисного аккаунта.':'Service account ішіндегі client_email қызметтік аккаунттың электрондық поштасы болуы керек.',
+    'Поле private_key должно содержать полный PEM-блок BEGIN PRIVATE KEY и END PRIVATE KEY.':'private_key өрісінде BEGIN PRIVATE KEY және END PRIVATE KEY аралығындағы толық PEM блогы болуы керек.',
+    'project_id в service account должен совпадать с NEXT_PUBLIC_FIREBASE_PROJECT_ID.':'Service account ішіндегі project_id NEXT_PUBLIC_FIREBASE_PROJECT_ID мәнімен сәйкес болуы керек.'
+  });
+
   function normalize(locale) { return supported.has(locale) ? locale : 'ru'; }
   function t(text, locale = activeLocale) {
     const source = String(text == null ? '' : text);
