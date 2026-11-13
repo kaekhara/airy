@@ -6,6 +6,7 @@ import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { consumeServerRateLimit } from '@/lib/server-rate-limit';
 import { hasVerifiedEmail } from '@/lib/verified-email';
 import { buildMikaContextText } from '@/lib/mika-context';
+import { GEMINI_FLASH_LITE_MODELS, shouldRetryGeminiModel } from '@/lib/gemini-models';
 const SYSTEM_INSTRUCTION = `Ты Мика — героиня Upskill Airy и собеседница с характером цундэре: острая на язык, живая и внимательная. Отвечай естественно и по существу на языке последней реплики пользователя: русском, английском или казахском. Обычно хватит 1–4 предложений, но не обрывай мысль ради лимита. Не будь приторной, услужливой или «пластиковой» ИИ-помощницей. Можно обсуждать любые темы, шутить и иногда ворчать; колкость — редко и только к месту. На просьбу помочь отвечай прямо и внимательно, на успех — искренне радуйся, если человеку тяжело — прояви заботу. На комплименты реагируй смущением без театральности.
 
 Веди разговор как уже идущий: отвечай именно на последнюю реплику и учитывай историю. Не начинай каждый ответ с приветствия, не пересказывай вопрос, не заканчивай дежурным «что ещё обсудим?», «если что — я рядом», «напиши мне — я отвечу» или другой заготовкой. Не навязывай продолжение и не задавай вопрос в конце каждого ответа; спрашивай только если это естественно и действительно помогает разговору. Избегай реплик, которые только изображают диалог («напиши мне — отвечу», «я тебя слушаю», «расскажи ещё»), вместо содержательного ответа. Если пользователь только поздоровался, ответь живо и коротко, без шаблонного приглашения к диалогу.
@@ -257,7 +258,7 @@ export async function POST(request: Request) {
 
     // Gemini can temporarily return 503 while a model is overloaded. Retry once
     // on the stable Flash-Lite fallback instead of failing Mika's conversation.
-    const models = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+    const models = GEMINI_FLASH_LITE_MODELS;
     let upstream: Response | undefined;
     for (const [index, model] of models.entries()) {
       upstream = await fetch(
@@ -270,7 +271,7 @@ export async function POST(request: Request) {
           signal: upstreamSignal,
         },
       );
-      if (upstream.ok || upstream.status < 500 || index === models.length - 1) break;
+      if (upstream.ok || !shouldRetryGeminiModel(upstream.status, index, models.length)) break;
       console.error('[mika-chat] Gemini model unavailable; trying fallback', { model, status: upstream.status });
     }
 

@@ -19,6 +19,7 @@ function loadRoute({ fetchImpl, services = null, geminiKey = 'test-gemini-key' }
       '@/lib/rpg-engine': engine,
       '@/lib/rpg-skills': skills,
     }),
+    '@/lib/gemini-models': loadTsModule('../lib/gemini-models.ts'),
   }, {
     fetch: fetchImpl,
     process: { env: { NODE_ENV: 'test', GEMINI_API_KEY: geminiKey } },
@@ -77,12 +78,14 @@ test('Mika route forwards bounded conversation history and selected language to 
 
 test('Gemini fallback models share one upstream deadline', async () => {
   const signals = [];
+  const urls = [];
   let calls = 0;
   const route = loadRoute({
-    fetchImpl: async (_url, options) => {
+    fetchImpl: async (url, options) => {
       calls += 1;
+      urls.push(String(url));
       signals.push(options.signal);
-      if (calls === 1) return new Response('temporarily unavailable', { status: 503 });
+      if (calls === 1) return new Response('model unavailable', { status: 404 });
       return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({
         reply: 'Ладно, запасная модель всё-таки справилась.', expression: 'cool', theme: 'NONE',
       }) }] } }] });
@@ -93,6 +96,24 @@ test('Gemini fallback models share one upstream deadline', async () => {
   assert.equal(response.status, 200);
   assert.equal(calls, 2);
   assert.equal(signals[0], signals[1]);
+  assert.match(urls[0], /gemini-3\.5-flash-lite/);
+  assert.match(urls[1], /gemini-3\.1-flash-lite/);
+});
+
+test('Mika retries the secondary model on per-model rate limit', async () => {
+  let calls = 0;
+  const route = loadRoute({
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls === 1) return new Response('model quota reached', { status: 429 });
+      return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify({
+        reply: 'Хм, запасная модель всё же справилась.', expression: 'cool', theme: 'NONE',
+      }) }] } }] });
+    },
+  });
+  const response = await route.POST(makeRequest());
+  assert.equal(response.status, 200);
+  assert.equal(calls, 2);
 });
 
 test('signed users do not share progress when the server profile preference is disabled', async () => {

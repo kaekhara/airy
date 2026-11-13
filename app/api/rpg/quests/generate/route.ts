@@ -5,6 +5,7 @@ import { sanitizeQuestDraft } from '@/lib/quest-draft';
 import { readBoundedRequestText } from '@/lib/bounded-request';
 import { hasVerifiedEmail } from '@/lib/verified-email';
 import { createQuestDraftCacheKey, readSkillDraftCache } from '@/lib/ai-generation-cache';
+import { GEMINI_FLASH_LITE_MODELS, shouldRetryGeminiModel } from '@/lib/gemini-models';
 
 export const runtime = 'nodejs';
 const MAX_BODY_BYTES = 4_000;
@@ -110,14 +111,14 @@ export async function POST(request: Request) {
       },
     });
 
-    const models = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+    const models = GEMINI_FLASH_LITE_MODELS;
     let upstream: Response | undefined;
     for (const [index, model] of models.entries()) {
       upstream = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
         body: payload, cache: 'no-store', signal: AbortSignal.timeout(20_000),
       });
-      if (upstream.ok || upstream.status < 500 || index === models.length - 1) break;
+      if (upstream.ok || !shouldRetryGeminiModel(upstream.status, index, models.length)) break;
     }
     if (!upstream) return fail('AI_UNAVAILABLE', 502);
     if (!upstream.ok) {
