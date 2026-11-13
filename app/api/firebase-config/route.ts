@@ -1,3 +1,5 @@
+import { getServerFeatures } from '@/lib/server-readiness';
+
 export async function GET() {
   const config = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -13,5 +15,13 @@ export async function GET() {
     return Response.json({ configured: false }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
 
-  return Response.json(config, { headers: { 'Cache-Control': 'no-store' } });
+  // Expose readiness booleans only. Never return credential material or an
+  // error detail that could reveal why a private server configuration failed.
+  const serverFeatures = getServerFeatures(
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON,
+    process.env.GEMINI_API_KEY,
+    config.projectId,
+  );
+
+  return Response.json({ ...config, serverFeatures }, { headers: { 'Cache-Control': 'no-store' } });
 }

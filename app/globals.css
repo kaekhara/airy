@@ -19,10 +19,99 @@ body {
   padding: 0;
 }
 
+.experience-frame-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(91, 63, 133, .26), transparent 62%),
+    #100d18;
+}
+
 .experience-frame {
   display: block;
   width: 100%;
   height: 100%;
   border: 0;
-  background: #fff9f7;
+  background: transparent;
+}
+
+.experience-loading {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: #f2eaf6;
+  font: 600 15px/1.5 system-ui, sans-serif;
+  text-align: center;
+  background:
+    radial-gradient(ellipse at 50% 48%, rgba(63, 44, 101, .56), transparent 55%),
+    #100d18;
+}
+
+.experience-loading p {
+  margin: 0;
+}
+
+.experience-loading-mark {
+  color: #f179d3;
+  font-size: 30px;
+  animation: experience-loading-pulse 1.4s ease-in-out infinite;
+}
+
+.experience-loading button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid rgba(241, 121, 211, .52);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(241, 121, 211, .16);
+  font: inherit;
+  cursor: pointer;
+}
+
+.experience-loading button:focus-visible {
+  outline: 3px solid #f5a4df;
+  outline-offset: 3px;
+}
+
+.experience-error {
+  box-sizing: border-box;
+  min-height: 100%;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 28px;
+  color: #f2eaf6;
+  background: #100d18;
+  font: 500 15px/1.55 system-ui, sans-serif;
+  text-align: center;
+}
+
+.experience-error > span { color: #f179d3; font-size: 32px; }
+.experience-error h1, .experience-error p { max-width: 520px; margin: 0; }
+.experience-error p { color: #b8abc5; }
+.experience-error button {
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 999px;
+  color: #180f20;
+  background: linear-gradient(120deg, #f179d3, #cc72f2);
+  font: 700 14px system-ui, sans-serif;
+  cursor: pointer;
+}
+.experience-error button:focus-visible { outline: 3px solid #f5a4df; outline-offset: 3px; }
+
+@keyframes experience-loading-pulse {
+  50% { opacity: .45; transform: scale(.86); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .experience-loading-mark { animation: none; }
 }

@@ -1,3 +1,21 @@
-# Local environment files are uploaded only by accident if not ignored here.
+# Do not upload source-only image originals or local secrets.
+assets/source/
 .env*
 **/.env*
+# Defense in depth for downloaded Firebase Admin credentials.
+*service-account*.json
+**/*service-account*.json
+*serviceAccount*.json
+**/*serviceAccount*.json
+*firebase-admin*.json
+**/*firebase-admin*.json
+*adminsdk*.json
+**/*adminsdk*.json
+*service-account*.json
+**/*service-account*.json
+*serviceAccount*.json
+**/*serviceAccount*.json
+*firebase-admin*.json
+**/*firebase-admin*.json
+*adminsdk*.json
+**/*adminsdk*.json

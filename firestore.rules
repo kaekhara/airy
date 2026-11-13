@@ -3,10 +3,37 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /data/users/{userId}/profile {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      function ownsProfile() {
+        return request.auth != null && request.auth.uid == userId;
+      }
+
+      function serverManagedFields() {
+        return [
+          'achievementUnlocks',
+          'unlockedTitles',
+          'shareCount',
+          'friendCount',
+          'lastRpgEventAt',
+          'rpgRulesVersion',
+          'rpgSummaryUpdatedAt',
+          'rpgSummaryNeedsRebuild',
+          'questHistory',
+          'purgedQuestArchiveIds',
+          'quests'
+        ];
+      }
+
+      allow read: if ownsProfile();
+      allow create: if ownsProfile()
+        && !request.resource.data.keys().hasAny(serverManagedFields());
+      allow update: if ownsProfile()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverManagedFields());
+      allow delete: if false;
 
       match /proofs/{proofId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null && request.auth.uid == userId;
+        // Practice records are written and rewarded only by authenticated server routes.
+        allow write: if false;
       }
     }
   }
