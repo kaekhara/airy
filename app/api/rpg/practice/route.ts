@@ -4,6 +4,7 @@ import { isSkillProfileGraphValid } from '@/lib/rpg-skills';
 import { addProofToRpgSummary, achievementMetricsFromSummary, buildRpgSummary, createRpgSummaryBuilder, unlockEligibleAchievementsFromMetrics } from '@/lib/rpg-achievements';
 import { appendQuestCompletion } from '@/lib/quest-history';
 import { consumeServerRateLimit } from '@/lib/server-rate-limit';
+import { isFirestorePermissionDenied } from '@/lib/firestore-errors';
 import { isCanonicalRecurringQuest } from '@/lib/rpg-quests';
 import { readBoundedRequestText } from '@/lib/bounded-request';
 import { countEmbeddedImageEvidence, isSupportedImageDataUrl } from '@/lib/image-evidence';
@@ -100,7 +101,7 @@ export async function POST(request: Request) {
   try { rateLimit = await consumeServerRateLimit(services.db, user.uid, 'practice', now, RATE_LIMIT, RATE_WINDOW_MS); }
   catch (error) {
     console.error('[rpg-practice] rate limit storage failed', { name: error instanceof Error ? error.name : 'UnknownError' });
-    return Response.json({ error: 'RATE_LIMIT_UNAVAILABLE' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ error: isFirestorePermissionDenied(error) ? 'FIRESTORE_PERMISSION_DENIED' : 'RATE_LIMIT_UNAVAILABLE' }, { status: 503, headers: { 'Cache-Control': 'no-store' } });
   }
   if (!rateLimit.allowed) return Response.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rateLimit.retryAfter), 'Cache-Control': 'no-store' } });
 
@@ -244,7 +245,7 @@ export async function POST(request: Request) {
       QUEST_MINUTES: [409, 'QUEST_MINUTES'], QUEST_EVIDENCE: [409, 'QUEST_EVIDENCE'],
       SKILL_GRAPH_INVALID: [409, 'SKILL_GRAPH_INVALID'],
     };
-    const [status, errorCode] = known[code] || [500, 'PRACTICE_SAVE_FAILED'];
+    const [status, errorCode] = isFirestorePermissionDenied(error) ? [503, 'FIRESTORE_PERMISSION_DENIED'] : known[code] || [500, 'PRACTICE_SAVE_FAILED'];
     if (status === 500) console.error('[rpg-practice] transaction failed', { code: error instanceof Error ? error.name : 'UnknownError' });
     return Response.json({ error: errorCode }, { status, headers: { 'Cache-Control': 'no-store' } });
   }

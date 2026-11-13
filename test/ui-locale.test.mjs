@@ -31,6 +31,12 @@ test('runtime status messages translate while preserving interpolated values', (
   assert.equal(locale.t('Навык «SwiftUI» добавлен в древо.', 'kk'), '«SwiftUI» дағдысы ағашқа қосылды.');
   assert.equal(locale.t('Письмо для подтверждения отправлено.', 'en'), 'Verification email sent.');
   assert.equal(locale.t('Облачная база временно недоступна. Попробуй позже.', 'kk'), 'Бұлттық дерекқор уақытша қолжетімсіз. Кейін қайтала.');
+  const readiness = 'Ключи Firebase Admin и AI найдены на сервере. Доступ к Firestore проверяется при серверной записи.';
+  assert.match(locale.t(readiness, 'en'), /Firestore access is checked when a server save runs/);
+  assert.match(locale.t(readiness, 'kk'), /Firestore қолжетімділігі серверге сақтау кезінде тексеріледі/);
+  const permissionHint = 'Firestore отклонил запись. Проверь, что сервисному аккаунту из FIREBASE_SERVICE_ACCOUNT_JSON выдана роль Cloud Datastore User (roles/datastore.user) в IAM Google Cloud, затем подожди применения роли.';
+  assert.match(locale.t(permissionHint, 'en'), /Cloud Datastore User.*roles\/datastore\.user.*Google Cloud IAM/);
+  assert.match(locale.t(permissionHint, 'kk'), /Cloud Datastore User.*roles\/datastore\.user/);
   assert.match(locale.t('Чтобы включить серверное сохранение RPG, добавь FIREBASE_SERVICE_ACCOUNT_JSON как secret в Vercel Production и выполни redeploy.', 'en'), /FIREBASE_SERVICE_ACCOUNT_JSON.*Vercel Production.*redeploy/);
   const kazakhSetupHint = locale.t('Чтобы включить ответы Мики, добавь GEMINI_API_KEY как secret в Vercel Production и выполни redeploy.', 'kk');
   assert.match(kazakhSetupHint, /GEMINI_API_KEY/);

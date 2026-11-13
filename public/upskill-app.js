@@ -168,8 +168,8 @@ store.addProof=async function(entry){
       const token=await store.auth.currentUser.getIdToken();
       const response=await fetch('/api/rpg/practice',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({eventId:entry.eventId,skill:entry.skill,text:entry.text,min:entry.min,link:entry.link,imgs:entry.imgs||[],questId:entry.quest||'',utcOffsetMinutes:-new Date().getTimezoneOffset()})});
       const result=await response.json().catch(()=>({}));
-      if(response.ok){Object.assign(entry,result.entry||{});if(result.summary&&result.summary.version===7){rpgSummarySync.invalidate();store.summary=result.summary;store.summaryError=false;}else void refreshRpgSummary();if(!result.created&&entry.id&&!store.proofs.some(p=>p.id===entry.id)){store.proofRecent=[entry,...store.proofRecent.filter(p=>p.id!==entry.id)].slice(0,PROOF_PAGE_SIZE);store.proofOlder.delete(entry.id);syncProofHistory();onData();}return{created:!!result.created,id:entry.id};}
-      throw new Error(({SKILL_LOCKED:'Этот навык пока закрыт. Сначала выполни условия открытия.',SKILL_UNKNOWN:'Навык не найден. Обнови страницу и выбери его снова.',SKILL_GRAPH_INVALID:'В связях древа обнаружена ошибка. Исправь зависимости навыков и повтори.',QUEST_INVALID:'Этот квест уже выполнен или больше не активен.',QUEST_DONE:'Этот квест уже выполнен.',QUEST_EXPIRED:'Время этого квеста закончилось.',QUEST_SKILL:'Выбери навык, указанный в квесте.',QUEST_MINUTES:'Для этого квеста нужно больше времени практики.',QUEST_EVIDENCE:'Приложи ссылку или изображение к записи.',RATE_LIMITED:'Слишком много записей подряд. Сделай небольшую паузу.',SERVER_NOT_CONFIGURED:'Облачная запись практики пока не настроена на сервере. Данные не записаны.',SERVER_CONFIG_INVALID:'Сервер сохранения практики требует настройки Firebase Admin.',AUTH_REQUIRED:'Войди в аккаунт, чтобы сохранить практику.',INVALID_AUTH:'Сеанс истёк. Войди в аккаунт ещё раз.'})[result.error]||'Не удалось сохранить практику через сервер.');
+      if(response.ok){Object.assign(entry,result.entry||{});const earnedAwards=result.created?applyServerAchievementAwards(result.earned):[];if(result.summary&&result.summary.version===7){rpgSummarySync.invalidate();store.summary=result.summary;store.summaryError=false;}else void refreshRpgSummary();if(!result.created&&entry.id&&!store.proofs.some(p=>p.id===entry.id)){store.proofRecent=[entry,...store.proofRecent.filter(p=>p.id!==entry.id)].slice(0,PROOF_PAGE_SIZE);store.proofOlder.delete(entry.id);syncProofHistory();onData();}return{created:!!result.created,id:entry.id,earnedAwards};}
+      throw new Error(({SKILL_LOCKED:'Этот навык пока закрыт. Сначала выполни условия открытия.',SKILL_UNKNOWN:'Навык не найден. Обнови страницу и выбери его снова.',SKILL_GRAPH_INVALID:'В связях древа обнаружена ошибка. Исправь зависимости навыков и повтори.',QUEST_INVALID:'Этот квест уже выполнен или больше не активен.',QUEST_DONE:'Этот квест уже выполнен.',QUEST_EXPIRED:'Время этого квеста закончилось.',QUEST_SKILL:'Выбери навык, указанный в квесте.',QUEST_MINUTES:'Для этого квеста нужно больше времени практики.',QUEST_EVIDENCE:'Приложи ссылку или изображение к записи.',RATE_LIMITED:'Слишком много записей подряд. Сделай небольшую паузу.',FIRESTORE_PERMISSION_DENIED:'Firestore отклонил запись. Проверь, что сервисному аккаунту из FIREBASE_SERVICE_ACCOUNT_JSON выдана роль Cloud Datastore User (roles/datastore.user) в IAM Google Cloud, затем подожди применения роли.',SERVER_NOT_CONFIGURED:'Облачная запись практики пока не настроена на сервере. Данные не записаны.',SERVER_CONFIG_INVALID:'Сервер сохранения практики требует настройки Firebase Admin.',AUTH_REQUIRED:'Войди в аккаунт, чтобы сохранить практику.',INVALID_AUTH:'Сеанс истёк. Войди в аккаунт ещё раз.'})[result.error]||'Не удалось сохранить практику через сервер.');
     }
     throw new Error('Облачное сохранение недоступно. Войди в аккаунт и проверь подключение.');
   }
@@ -363,7 +363,7 @@ function createMusicGraph(){const AudioContextType=window.AudioContext||window.w
 async function toggleMusic(){if(music.loading)return;if(music.enabled){music.enabled=false;const now=music.context.currentTime;music.master.gain.cancelScheduledValues(now);music.master.gain.setValueAtTime(music.master.gain.value,now);music.master.gain.linearRampToValueAtTime(0,now+.65);updateMusicButton();updateSettingsMusicButton();return;}music.loading=true;updateMusicButton(true);try{if(!music.context)createMusicGraph();const resume=music.context.resume();if(!music.started){music.players[0].gain.gain.value=1;const firstPlay=music.players[0].audio.play();firstPlay.catch(()=>{});await Promise.all([waitForAudio(music.players[0].audio,false),waitForAudio(music.players[1].audio)]);await firstPlay;music.ready=true;music.started=true;music.active=0;}else if(music.players[music.active].audio.paused){await music.players[music.active].audio.play();}await resume;music.enabled=true;const now=music.context.currentTime;music.master.gain.cancelScheduledValues(now);music.master.gain.setValueAtTime(music.master.gain.value,now);music.master.gain.linearRampToValueAtTime(music.volume,now+1.2);updateMusicButton();updateSettingsMusicButton();}catch(error){music.enabled=false;music.loading=false;updateMusicButton();updateSettingsMusicButton();music.players.forEach(p=>{p.audio.pause();p.source.disconnect();p.gain.disconnect();});if(music.context)music.context.close().catch(()=>{});music.context=null;music.master=null;music.players=[];music.ready=false;music.started=false;toast(error instanceof Error?error.message:'Не удалось включить музыку. Попробуй ещё раз.');return;}music.loading=false;updateMusicButton();updateSettingsMusicButton();}
 $('#musicToggle').addEventListener('click',toggleMusic);
 function updateSettingsMusicButton(){const button=$('#settingsMusicToggle');if(!button)return;button.disabled=music.loading;button.setAttribute('aria-pressed',String(music.enabled));button.textContent=music.loading?'Подключаю…':music.enabled?'Выключить музыку':'Включить музыку';}
-function updateServerRuntimeStatus(){const status=$('#serverRuntimeStatus');if(!status)return;const t=window.AiryUiLocale?.t||((value)=>value),features=window.UPSKILL_SERVER_FEATURES;if(!features){status.textContent=t('Не удалось проверить облачные функции. Проверь соединение и обнови страницу.');status.dataset.state='unknown';return;}const invalidHints={'invalid-json':'FIREBASE_SERVICE_ACCOUNT_JSON должен содержать полный корректный JSON.','missing-fields':'В JSON service account должны быть поля project_id, client_email и private_key.','invalid-email':'Поле client_email в service account должно содержать адрес сервисного аккаунта.','invalid-private-key':'Поле private_key должно содержать полный PEM-блок BEGIN PRIVATE KEY и END PRIVATE KEY.','project-mismatch':'project_id в service account должен совпадать с NEXT_PUBLIC_FIREBASE_PROJECT_ID.'};if(invalidHints[features.rpgStatus]){status.textContent='⚠ '+t(invalidHints[features.rpgStatus]);status.dataset.state='invalid';return;}const hints=[];if(features.rpgStatus==='missing'||!features.rpg)hints.push(t('Чтобы включить серверное сохранение RPG, добавь FIREBASE_SERVICE_ACCOUNT_JSON как secret в Vercel Production и выполни redeploy.'));if(!features.ai)hints.push(t('Чтобы включить ответы Мики, добавь GEMINI_API_KEY как secret в Vercel Production и выполни redeploy.'));status.textContent=hints.length?'⚠ '+hints.join(' '):'✓ '+t('Сервер RPG и AI настроены. Личные данные и ключи остаются на сервере.');status.dataset.state=hints.length?'warning':'ready';}
+function updateServerRuntimeStatus(){const status=$('#serverRuntimeStatus');if(!status)return;const t=window.AiryUiLocale?.t||((value)=>value),features=window.UPSKILL_SERVER_FEATURES;if(!features){status.textContent=t('Не удалось проверить облачные функции. Проверь соединение и обнови страницу.');status.dataset.state='unknown';return;}const invalidHints={'invalid-json':'FIREBASE_SERVICE_ACCOUNT_JSON должен содержать полный корректный JSON.','missing-fields':'В JSON service account должны быть поля project_id, client_email и private_key.','invalid-email':'Поле client_email в service account должно содержать адрес сервисного аккаунта.','invalid-private-key':'Поле private_key должно содержать полный PEM-блок BEGIN PRIVATE KEY и END PRIVATE KEY.','project-mismatch':'project_id в service account должен совпадать с NEXT_PUBLIC_FIREBASE_PROJECT_ID.'};if(invalidHints[features.rpgStatus]){status.textContent='⚠ '+t(invalidHints[features.rpgStatus]);status.dataset.state='invalid';return;}const hints=[];if(features.rpgStatus==='missing'||!features.rpg)hints.push(t('Чтобы включить серверное сохранение RPG, добавь FIREBASE_SERVICE_ACCOUNT_JSON как secret в Vercel Production и выполни redeploy.'));if(!features.ai)hints.push(t('Чтобы включить ответы Мики, добавь GEMINI_API_KEY как secret в Vercel Production и выполни redeploy.'));status.textContent=hints.length?'⚠ '+hints.join(' '):'✓ '+t('Ключи Firebase Admin и AI найдены на сервере. Доступ к Firestore проверяется при серверной записи.');status.dataset.state=hints.length?'warning':'configured';}
 function profilePreferences(){return Object.assign({reducedMotion:SYSTEM_REDUCED,musicVolume:24,effectsVolume:28,effectsEnabled:false,theme:document.body.dataset.themeMode||'night',uiLanguage:'ru',shareProgressWithMika:true,mikaLanguage:'auto',achievementNotifications:false},(store.profile&&store.profile.preferences)||{});}
 function applyMotionPreference(value){REDUCED=value==='reduced';document.body.dataset.motion=REDUCED?'reduced':'full';if(REDUCED)petals.stop();else if(activeTab==='novel')petals.start();}
 const persistPreference=AiryPreferenceWriter.createPreferenceWriter({getCurrent:profilePreferences,getScope:()=>store.mode+':'+(store.auth?.currentUser?.uid||store.accountUser?.uid||'guest'),save:preferences=>store.saveProfile({preferences}),onSaved:preferences=>{store.profile=Object.assign({},store.profile,{preferences});}});
@@ -1058,7 +1058,8 @@ $('#ciForm').addEventListener('submit',async e=>{
     if(store.mode==='db'&&!store.proofs.some(p=>p.id===entry.id))store.proofs=[entry].concat(store.proofs);
     const finalStats=computeStats(store.proofs),milestone=window.AiryRpgMilestones.pick(before,finalStats,ACH,Object.fromEntries(TREE.flatMap(branch=>[[branch.id,branch.name],...branch.leaves.map(leaf=>[leaf.id,leaf.name])])));
     if(milestone)fx(milestone.icon,milestone.message,milestone.kind);
-    try{notifyNewAchievements(finalStats,before);}catch(notificationError){console.warn('Achievement notification could not be shown',notificationError);}
+    if(store.mode==='db'&&savedEvent.earnedAwards.length)presentServerAchievementAwards(savedEvent.earnedAwards,{showCelebration:false});
+    else if(store.mode!=='db')try{notifyNewAchievements(finalStats,before);}catch(notificationError){console.warn('Achievement notification could not be shown',notificationError);}
     const orderPatch={recentBranchIds:promotedBranches(SK[f.skill].branch)};
     store.profile=Object.assign({},store.profile,orderPatch);renderAll();
     try{await store.saveProfile(orderPatch);saveState('saved','Сохранено');}catch(orderError){console.warn('Skill order could not sync',orderError);saveState('error','Практика сохранена · порядок не сохранён');}
@@ -1068,13 +1069,13 @@ $('#ciForm').addEventListener('submit',async e=>{
       const patch={quests,questHistory:history.slice(-500)};try{await store.saveProfile(patch);store.profile=Object.assign({},store.profile,patch);}catch(e4){console.warn('Completed quest history could not be saved',e4);}
     }
     closeCheckin();
-    const lines=afterLines(entry,before,after);
+    const lines=afterLines(entry,before,after,store.mode==='db'?savedEvent.earnedAwards:null);
     if(quest)lines.splice(1,0,{expr:'proud',text:['daily','weekly','boss'].includes(quest.period)?'Квест «'+quest.title+'» выполнен. Бонус +10 XP.':'Квест «'+quest.title+'» выполнен — прогресс сохранён.'});
     show('novel');animatePracticeProgress(before,after,entry);play(lines);
   }catch(e3){saveState('error','Не сохранено');err.textContent=('Не удалось сохранить: '+((e3&&e3.message)||'ошибка')).slice(0,180);}
   finally{ciBusy=false;btn.disabled=false;btn.textContent=ciEditing?'Сохранить изменения':'Записать в дневник';}
 });
-function afterLines(en,b,a){
+function afterLines(en,b,a,serverAwards=null){
   const sk=SK[en.skill];
   const lines=[{expr:'happy',text:'Записано: «'+sk.name+'», '+en.min+' мин. Получено '+en.xp+' XP'+(en.bonus?' (из них '+en.bonus+' за серию)':'')+'.'}];
   TREE.forEach(br=>{
@@ -1085,7 +1086,8 @@ function afterLines(en,b,a){
     });
   });
   if(a.tl.L>b.tl.L)lines.push({expr:'proud',text:'Общий уровень вырос до '+a.tl.L+'. Теперь твоё звание «'+rankOf(a.tl.L)+'».',fx:['LEVEL '+a.tl.L,rankOf(a.tl.L)]});
-  ACH.forEach(x=>{if(a.ach.indexOf(x.id)>=0&&b.ach.indexOf(x.id)<0)lines.push({expr:'proud',text:'Новая награда «'+x.n+'»: '+x.d.toLowerCase()+'.',fx:[x.g,x.n]});});
+  if(Array.isArray(serverAwards))serverAwards.forEach(award=>lines.push({expr:'proud',text:'Новое достижение «'+award.n+'» открыто.',fx:[award.g||'🏆',award.n]}));
+  else ACH.forEach(x=>{if(a.ach.indexOf(x.id)>=0&&b.ach.indexOf(x.id)<0)lines.push({expr:'proud',text:'Новая награда «'+x.n+'»: '+x.d.toLowerCase()+'.',fx:[x.g,x.n]});});
   if(a.streak>b.streak&&a.streak>=2)lines.push({expr:'happy',text:'Серия: '+a.streak+' дн. подряд.'});
   return lines;
 }
@@ -1304,6 +1306,7 @@ $('#treeSearch').addEventListener('input',updateTreeFilter);
 $('#treeSearch').addEventListener('keydown',e=>{if(e.key==='Escape'&&e.currentTarget.value){e.preventDefault();e.currentTarget.value='';updateTreeFilter();}});
 $('#treeSearchClear').addEventListener('click',()=>{$('#treeSearch').value='';updateTreeFilter();$('#treeSearch').focus();});
 const treeCamera={scale:1,x:0,y:0,pan:false,dragging:false,startX:0,startY:0,originX:0,originY:0};
+let treeGroupObserver=null;
 function clampTreeCamera(){
   const viewport=$('#treeViewport'),tree=$('#tree');if(!viewport||!tree)return;
   const vw=viewport.clientWidth,vh=viewport.clientHeight,cw=tree.offsetWidth*treeCamera.scale,ch=tree.offsetHeight*treeCamera.scale;
@@ -1350,6 +1353,7 @@ treeViewport.addEventListener('keydown',event=>{
 treeViewport.addEventListener('wheel',event=>{if(!(event.ctrlKey||event.metaKey))return;event.preventDefault();const rect=treeViewport.getBoundingClientRect();setTreeZoom(treeCamera.scale+(event.deltaY<0?.08:-.08),event.clientX-rect.left,event.clientY-rect.top);},{passive:false});
 function renderTree(){
   const root=$('#tree');root.innerHTML='';
+  if(treeGroupObserver){treeGroupObserver.disconnect();treeGroupObserver=null;}
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','edges');svg.id='edges';svg.setAttribute('aria-hidden','true');root.appendChild(svg);
   const rn=document.createElement('div');rn.className='root-node';rn.id='rootNode';rn.innerHTML='<b>'+S.tl.L+'</b><span class="kr" lang="ko">레벨</span>';root.appendChild(rn);
   const gs=document.createElement('div');gs.className='groups';
@@ -1361,7 +1365,22 @@ function renderTree(){
     if(!br.leaves.length){const hint=document.createElement('span');hint.className='n-xp';hint.textContent='Добавь навык ниже';lv2.appendChild(hint);}
     g.appendChild(lv2);gs.appendChild(g);
   });
-  root.appendChild(gs);applyTreeCamera();
+  root.appendChild(gs);
+  const nodeCount=TREE.reduce((total,branch)=>total+1+branch.leaves.length,0);
+  root.dataset.largeTree=String(nodeCount>80);
+  const treeViewport=$('#treeViewport');
+  if(window.IntersectionObserver){
+    treeGroupObserver=new IntersectionObserver(entries=>{
+      let changed=false;
+      entries.forEach(entry=>{
+        const next=entry.isIntersecting?'true':'false';
+        if(entry.target.dataset.viewportVisible!==next){entry.target.dataset.viewportVisible=next;changed=true;}
+      });
+      if(changed)scheduleDrawEdges();
+    },{root:treeViewport,rootMargin:'160px 0px',threshold:0});
+    $$('.grp',gs).forEach(group=>{group.dataset.viewportVisible='false';treeGroupObserver.observe(group);});
+  }
+  applyTreeCamera();
   const sel=$('#newParent');const cur=sel.value;sel.innerHTML='';
   TREE.forEach(b=>sel.appendChild(new Option(b.name,b.id)));sel.appendChild(new Option('Новая ветка',' new'));
   if(cur&&Array.from(sel.options).some(o=>o.value===cur))sel.value=cur;
@@ -1379,7 +1398,7 @@ function drawEdges(generation=edgeDrawGeneration){
   const root=$('#tree'),svg=$('#edges');if(!root||!svg||root.hidden||$('#view-tree').hidden)return;
   const rn=$('#rootNode');if(!rn)return;
   const R=root.getBoundingClientRect(),scale=treeCamera.scale||1,width=root.offsetWidth,height=root.offsetHeight,rr=rn.getBoundingClientRect();
-  const groups=$$('.grp',root);let groupIndex=0,activeLeaves=null,leafIndex=0,activeBranchRect=null,activeColor='#fff';
+  const allGroups=$$('.grp',root),groups=treeGroupObserver?allGroups.filter(group=>group.dataset.viewportVisible==='true'):allGroups;let groupIndex=0,activeLeaves=null,leafIndex=0,activeBranchRect=null,activeColor='#fff';
   svg.setAttribute('viewBox','0 0 '+width+' '+height);svg.replaceChildren();
   function path(target,a,b,color,dash){
     const x1=(a.right-R.left)/scale,y1=(a.top+a.height/2-R.top)/scale,x2=(b.left-R.left)/scale,y2=(b.top+b.height/2-R.top)/scale,dx=(x2-x1)/2;
@@ -1641,13 +1660,31 @@ async function loadFriends(force=false){
 function friendErrorMessage(code){return ({EMAIL_VERIFICATION_REQUIRED:'Подтверди почту, чтобы добавлять друзей.',INVITE_NOT_FOUND:'Код не найден. Проверь его и попробуй ещё раз.',INVITE_EXPIRED:'Срок действия кода истёк. Попроси создать новый.',INVITE_ALREADY_USED:'Этот код уже использовали. Попроси друга создать новый.',INVALID_INVITE:'Нельзя добавить самого себя.',PROFILE_NOT_FOUND:'Профиль одной из сторон ещё не готов. Выйдите и войдите снова.',RATE_LIMITED:'Слишком много попыток. Подожди минуту.',SERVER_NOT_CONFIGURED:'Облачный сервер пока не настроен.'})[code]||'Не удалось выполнить действие. Попробуй ещё раз.';}
 async function postFriendAction(payload){const user=store.auth&&store.auth.currentUser;if(!user||!user.emailVerified)throw new Error('EMAIL_VERIFICATION_REQUIRED');const token=await user.getIdToken(),response=await fetch('/api/rpg/friends',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(payload)}),result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'FRIEND_CONNECT_FAILED');return result;}
 function applyFriendAchievementResult(result){
-  const profile=store.profile||{},ledger={...(profile.achievementUnlocks||{})},titles=new Set(Array.isArray(profile.unlockedTitles)?profile.unlockedTitles:[]);
-  (Array.isArray(result.ownAwards)?result.ownAwards:[]).forEach(award=>{if(!award||!award.id)return;ledger[award.id]={at:Date.now(),rarity:award.rarity,reward:award.reward};if(award.reward&&award.reward.title)titles.add(award.reward.title);});
-  store.profile=Object.assign({},profile,{friendCount:Math.max(0,Number(result.ownFriendCount)||0),achievementUnlocks:ledger,unlockedTitles:Array.from(titles)});
+  store.profile=Object.assign({},store.profile||{},{friendCount:Math.max(0,Number(result.ownFriendCount)||0)});
+  return applyServerAchievementAwards(result.ownAwards);
+}
+function applyServerAchievementAwards(awards){
+  const profile=store.profile||{},ledger={...(profile.achievementUnlocks||{})},titles=new Set(Array.isArray(profile.unlockedTitles)?profile.unlockedTitles:[]),fresh=[];
+  const definitions=new Map(allAchievementDefinitions().map(award=>[award.id,award]));
+  (Array.isArray(awards)?awards:[]).forEach(award=>{
+    if(!award||typeof award.id!=='string'||!/^[-a-zA-Z0-9_:]{1,100}$/.test(award.id)||ledger[award.id])return;
+    const definition=definitions.get(award.id);if(!definition)return;
+    const reward=definition.reward||award.reward||{type:'cosmetic',title:'Награда'};
+    ledger[award.id]={at:Date.now(),rarity:definition.rarity||award.rarity||'Common',reward,achievement:{id:definition.id,n:definition.n,d:definition.d,category:definition.category,g:definition.g,metric:definition.metric,target:definition.target,unit:definition.unit,unitForms:definition.unitForms,secret:definition.secret}};
+    if(reward.title)titles.add(reward.title);fresh.push(definition);
+  });
+  if(fresh.length)store.profile=Object.assign({},profile,{achievementUnlocks:ledger,unlockedTitles:Array.from(titles)});
+  return fresh;
+}
+function presentServerAchievementAwards(awards,{showCelebration=true}={}){
+  if(!awards.length)return;
+  awards.forEach((award,index)=>{const badge=document.querySelector('.badge[data-achievement="'+award.id+'"]');if(!badge)return;badge.style.setProperty('--earned-delay',Math.min(index,4)*90+'ms');badge.classList.remove('just-earned');void badge.offsetWidth;badge.classList.add('just-earned');setTimeout(()=>{badge.classList.remove('just-earned');badge.style.removeProperty('--earned-delay');},1100+index*90);});
+  const first=awards[0];if(showCelebration)fx(awards.length===1?'ДОСТИЖЕНИЕ ОТКРЫТО':`ДОСТИЖЕНИЙ: ${awards.length}`,first.n,'award');
+  if(profilePreferences().achievementNotifications&&('Notification'in window)&&Notification.permission==='granted')awards.slice(0,3).forEach(award=>{try{new Notification('Новое достижение · '+award.n,{body:award.d,icon:'/icons/airy-192.png',tag:'airy-achievement-'+award.id});}catch{}});
 }
 $('#friendInviteCreate').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;$('#friendsStatus').textContent='Создаю одноразовый код…';try{const result=await postFriendAction({action:'invite'});$('#friendInviteCodeOut').value=result.code;$('#friendInviteResult').hidden=false;$('#friendsStatus').textContent='Код действует 7 дней и сработает один раз.';}catch(error){$('#friendsStatus').textContent=friendErrorMessage(error.message);}finally{button.disabled=false;}});
 $('#friendInviteCopy').addEventListener('click',async()=>{const input=$('#friendInviteCodeOut');try{await navigator.clipboard.writeText(input.value);$('#friendsStatus').textContent='Код скопирован. Отправь его другу.';}catch{input.focus();input.select();try{document.execCommand('copy');$('#friendsStatus').textContent='Код скопирован. Отправь его другу.';}catch{$('#friendsStatus').textContent='Выдели код и скопируй его вручную.';}}});
-$('#friendAcceptForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('#friendAcceptButton'),code=$('#friendCodeInput').value;button.disabled=true;$('#friendsStatus').textContent='Проверяю приглашение…';try{const result=await postFriendAction({action:'accept',code});applyFriendAchievementResult(result);$('#friendCodeInput').value='';$('#friendInviteResult').hidden=true;await loadFriends(true);renderAll();$('#friendsStatus').textContent=result.alreadyConnected?'Вы уже добавлены друг у друга.':'Готово, вы теперь друзья.';if(result.ownAwards?.length)toast(`Открыто достижение «${result.ownAwards[0].n}».`);}catch(error){$('#friendsStatus').textContent=friendErrorMessage(error.message);}finally{button.disabled=false;}});
+$('#friendAcceptForm').addEventListener('submit',async event=>{event.preventDefault();const button=$('#friendAcceptButton'),code=$('#friendCodeInput').value;button.disabled=true;$('#friendsStatus').textContent='Проверяю приглашение…';try{const result=await postFriendAction({action:'accept',code}),fresh=applyFriendAchievementResult(result);$('#friendCodeInput').value='';$('#friendInviteResult').hidden=true;await loadFriends(true);renderAll();presentServerAchievementAwards(fresh);$('#friendsStatus').textContent=result.alreadyConnected?'Вы уже добавлены друг у друга.':'Готово, вы теперь друзья.';if(fresh.length)toast(`Открыто достижение «${fresh[0].n}».`);}catch(error){$('#friendsStatus').textContent=friendErrorMessage(error.message);}finally{button.disabled=false;}});
 $('#friendsReload').addEventListener('click',()=>loadFriends(true));
 $('#friendsList').addEventListener('click',async event=>{const button=event.target.closest('[data-remove-friend]');if(!button)return;const name=friendsState.items.find(friend=>friend.uid===button.dataset.removeFriend)?.name||'этого друга';if(!window.confirm(`Убрать ${name} из списка друзей? Заработанные достижения сохранятся.`))return;button.disabled=true;$('#friendsStatus').textContent='Обновляю связь…';try{const user=store.auth.currentUser,token=await user.getIdToken(),response=await fetch('/api/rpg/friends',{method:'DELETE',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify({friendUid:button.dataset.removeFriend})}),result=await response.json().catch(()=>({}));if(!response.ok)throw new Error(result.error||'FRIEND_REMOVE_FAILED');await loadFriends(true);$('#friendsStatus').textContent=result.removed?'Связь удалена. История достижений сохранена.':'Эта связь уже удалена.';}catch{$('#friendsStatus').textContent='Не удалось удалить друга. Проверь соединение и попробуй ещё раз.';}finally{renderFriends();}});
 
@@ -1697,11 +1734,13 @@ $('#shareProgress').addEventListener('click',async e=>{
       const token=await store.auth.currentUser.getIdToken(),response=await fetch('/api/rpg/share',{method:'POST',headers:{Authorization:'Bearer '+token}}),result=await response.json().catch(()=>({}));
       if(!response.ok)throw new Error(result.error==='SERVER_NOT_CONFIGURED'?'Облачные награды пока не настроены на сервере. Ссылка уже подготовлена.':'Ссылка отправлена, но событие не удалось сохранить.');
       if(!result.created){renderAll();toast('Ссылка подготовлена. Засчёт за сегодня уже получен.');return;}
+      store.profile=Object.assign({},store.profile||{},{shareCount:Math.max(0,Number(result.count)||0)});
+      var freshAwards=applyServerAchievementAwards(result.earned);
     }else{
       const shareCount=(Number(store.profile.shareCount)||0)+1;await store.saveProfile({shareCount});store.profile=Object.assign({},store.profile,{shareCount});
       await recordAchievementUnlocks(computeStats(store.proofs),previous);
     }
-    renderAll();toast('Прогрессом поделился. Событие сохранено.');
+    renderAll();if(store.mode==='db')presentServerAchievementAwards(freshAwards||[]);toast('Прогрессом поделился. Событие сохранено.');
   }catch(error){if(error&&error.name==='AbortError')return;toast(error&&error.message==='SHARE_UNAVAILABLE'?'В этом браузере нет функции поделиться.':'Не удалось поделиться прогрессом.','error');}
   finally{button.disabled=false;}
 });

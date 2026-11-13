@@ -19,6 +19,18 @@
     }
   };
   Object.assign(dictionaries.en, {
+    'Ключи Firebase Admin и AI найдены на сервере. Доступ к Firestore проверяется при серверной записи.':'Firebase Admin and AI keys are present on the server. Firestore access is checked when a server save runs.',
+  });
+  Object.assign(dictionaries.kk, {
+    'Ключи Firebase Admin и AI найдены на сервере. Доступ к Firestore проверяется при серверной записи.':'Firebase Admin және AI кілттері серверде бар. Firestore қолжетімділігі серверге сақтау кезінде тексеріледі.',
+  });
+  Object.assign(dictionaries.en, {
+    'Firestore отклонил запись. Проверь, что сервисному аккаунту из FIREBASE_SERVICE_ACCOUNT_JSON выдана роль Cloud Datastore User (roles/datastore.user) в IAM Google Cloud, затем подожди применения роли.':'Firestore denied the save. Check that the service account in FIREBASE_SERVICE_ACCOUNT_JSON has the Cloud Datastore User role (roles/datastore.user) in Google Cloud IAM, then wait for the role to take effect.',
+  });
+  Object.assign(dictionaries.kk, {
+    'Firestore отклонил запись. Проверь, что сервисному аккаунту из FIREBASE_SERVICE_ACCOUNT_JSON выдана роль Cloud Datastore User (roles/datastore.user) в IAM Google Cloud, затем подожди применения роли.':'Firestore сақтауға рұқсат бермеді. FIREBASE_SERVICE_ACCOUNT_JSON ішіндегі service account-та Google Cloud IAM жүйесінде Cloud Datastore User (roles/datastore.user) рөлі барын тексеріп, рөл күшіне енгенше күт.',
+  });
+  Object.assign(dictionaries.en, {
     'Проверяю облачные функции…':'Checking cloud features…','Не удалось проверить облачные функции. Проверь соединение и обнови страницу.':'Could not check cloud features. Check your connection and refresh the page.','Неверно настроен сервер Firebase Admin. Проверь формат service account и ID проекта в настройках хостинга.':'Firebase Admin is misconfigured. Check the service account format and project ID in hosting settings.','Серверная запись RPG':'RPG progress saving','Ответы Мики':'Mika replies','Чтобы включить серверное сохранение RPG, добавь FIREBASE_SERVICE_ACCOUNT_JSON как secret в Vercel Production и выполни redeploy.':'To enable server-side RPG saves, add FIREBASE_SERVICE_ACCOUNT_JSON as a secret in Vercel Production and redeploy.','Чтобы включить ответы Мики, добавь GEMINI_API_KEY как secret в Vercel Production и выполни redeploy.':'To enable Mika replies, add GEMINI_API_KEY as a secret in Vercel Production and redeploy.','Не настроено':'Not configured','Часть облачных функций недоступна.':'Some cloud features are unavailable.','Сервер RPG и AI настроены. Личные данные и ключи остаются на сервере.':'RPG and AI servers are configured. Personal data and keys stay on the server.',
     'Кибербезопасность':'Cybersecurity','Сети':'Networks','Криптография':'Cryptography','Веб-уязвимости':'Web vulnerabilities','CTF и практика':'CTF and practice',
     'Базы данных':'Databases','SQL-запросы':'SQL queries','Триггеры и функции':'Triggers and functions','Роли и безопасность':'Roles and security','Транзакции и репликация':'Transactions and replication',

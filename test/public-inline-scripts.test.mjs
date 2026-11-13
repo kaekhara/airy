@@ -39,6 +39,14 @@ test('manual and AI-generated tree additions use the bounded node guard', () => 
   assert.match(app, /AirySkillNodeLimit\.canAdd\(p,addsBranch\?1:0,addsBranch\?0:1\)/);
 });
 
+test('settings distinguish configured server credentials from verified Firestore writes', () => {
+  const app = readFileSync(new URL('../public/upskill-app.js', import.meta.url), 'utf8');
+  const html = readFileSync(new URL('../public/upskill.html', import.meta.url), 'utf8');
+  assert.match(app, /Ключи Firebase Admin и AI найдены на сервере\. Доступ к Firestore проверяется при серверной записи\./);
+  assert.doesNotMatch(app, /Сервер RPG и AI настроены\. Личные данные и ключи остаются на сервере\./);
+  assert.match(html, /#serverRuntimeStatus\[data-state="configured"\]/);
+});
+
 test('every static button has a visible or programmatic accessible name', () => {
   const html = readFileSync(new URL('../public/upskill.html', import.meta.url), 'utf8');
   const buttons = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/gi)];
@@ -148,6 +156,10 @@ test('cloud history stays paginated and skill-tree edge redraws are frame-coales
   assert.match(source, /if\(first===false&&!store\.deferHistory&&!store\.historyComplete&&!store\.historyLoading\)loadOlderProofPages\(query,store\.historyCursor,generation,Infinity\)/, 'history backfill should only run when explicitly enabled');
   assert.match(source, /function scheduleDrawEdges\(\)\{\s*edgeDrawGeneration\+\+;\s*if\(edgeBatchFrame\)\{cancelAnimationFrame\(edgeBatchFrame\);edgeBatchFrame=0;\}\s*if\(edgeDrawFrame\)return;\s*edgeDrawFrame=requestAnimationFrame\(\(\)=>\{edgeDrawFrame=0;drawEdges\(edgeDrawGeneration\);\}\);\s*\}/, 'repeated layout changes should share one edge redraw per frame and cancel stale batches');
   assert.match(source, /let budget=96;const fragment=document\.createDocumentFragment\(\)/, 'large edge sets should be rendered in bounded batches');
+  assert.match(source, /treeGroupObserver=new IntersectionObserver\(entries=>[\s\S]*?root:treeViewport,rootMargin:'160px 0px',threshold:0/, 'only branches near the visible tree viewport should trigger edge work');
+  assert.match(source, /groups=treeGroupObserver\?allGroups\.filter\(group=>group\.dataset\.viewportVisible==='true'\):allGroups/, 'edge layout should skip offscreen branches when IntersectionObserver is available');
+  assert.match(source, /root\.dataset\.largeTree=String\(nodeCount>80\)/, 'large trees should be marked before interaction animations are painted');
+  assert.match(html, /\.tree\[data-large-tree="true"\] \.node\{animation:none\}/, 'large trees should not animate thousands of node cards at once');
   assert.match(source, /activeBranchRect=branch\.hidden\?rr:branch\.getBoundingClientRect\(\)/, 'filtered leaves should connect to the visible root instead of an invisible branch');
   assert.match(source, /if\(generation!==edgeDrawGeneration\|\|!svg\.isConnected\)return/, 'a stale edge batch must stop after the tree is redrawn or filtered');
   assert.match(source, /edgeBatchFrame=requestAnimationFrame\(\(\)=>\{edgeBatchFrame=0;drawBatch\(\);\}\)/, 'remaining edge work should continue on later animation frames');
