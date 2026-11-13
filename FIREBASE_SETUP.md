@@ -10,7 +10,7 @@ The authenticated Next.js routes `/api/rpg/practice`, `/api/rpg/practice/[eventI
 
 The server routes are enabled only when a private Admin credential is configured:
 
-1. Create a service account for the existing Firebase project. Grant only the Firestore data access required by the route (Cloud Datastore User); do not use a project-owner key.
+1. Create a service account for the existing Firebase project. In Google Cloud Console, open **IAM & Admin → IAM → Grant access**. For **New principals**, paste only the service account's `client_email` value from its downloaded JSON (for example, `firebase-adminsdk-…@upskillairy.iam.gserviceaccount.com`). Under **Select a role**, choose **Cloud Datastore User** (`roles/datastore.user`), then save. Do not paste the full JSON, a private key, or use a project-owner key.
 2. Put the complete service-account JSON in a private environment variable named `FIREBASE_SERVICE_ACCOUNT_JSON` in local `.env.local` and the Vercel Production environment. The production Mika endpoint and AI generation endpoints require this credential for authentication and shared rate limiting; without it, these APIs fail closed. Add `GEMINI_API_KEY` as a separate private environment variable for Mika, skill-tree generation, and AI quest generation. Do not use a `NEXT_PUBLIC_*` name, commit credentials, or paste them into chat.
    Keep the downloaded JSON outside the repository and copy its contents into the environment variable. `.vercelignore` also excludes `.env*` files and common Firebase service-account JSON filenames as a second guard for CLI uploads.
 3. Redeploy and confirm signed-in practice creation, edit/delete, local-data import, and sharing work through the server routes.

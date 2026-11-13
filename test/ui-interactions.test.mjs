@@ -41,3 +41,24 @@ test('every static button is bound to a direct handler, delegated action, or han
   assert.equal(unmatched.length, 0, `Buttons without a discoverable handler: ${JSON.stringify(unmatched)}`);
   assert.ok(buttons.length >= 70, 'The check should cover the current static button inventory.');
 });
+
+test('archive entry stays in settings and its arrow hover respects reduced motion', async () => {
+  const html = await readFile(new URL('../public/upskill.html', import.meta.url), 'utf8');
+  const button = html.match(/<button[^>]*id="openArchiveFromSettings"[^>]*>[\s\S]*?<\/button>/)?.[0] || '';
+  assert.ok(button.includes('archive-open-arrow'), 'the settings archive action has a dedicated animated arrow');
+  assert.match(html, /#openArchiveFromSettings:hover \.archive-open-arrow/);
+  assert.match(html, /#openArchiveFromSettings:focus-visible \.archive-open-arrow/);
+  assert.match(html, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*?button:not\(:disabled\)\{transition:none!important\}/);
+  assert.match(html, /id="openArchiveFromSettings"/);
+  assert.doesNotMatch(html, /<(?:button|a)[^>]+(?:data-tab="archive"|href="#archive")/);
+});
+
+test('profile name is canonical in the app before optional Firebase Auth sync', async () => {
+  const app = await readFile(new URL('../public/upskill-app.js', import.meta.url), 'utf8');
+  const start = app.indexOf('async function saveProfileName(');
+  const end = app.indexOf("$('#pfSave').addEventListener", start);
+  const handler = app.slice(start, end);
+  assert.ok(start >= 0 && end > start, 'profile name save handler is present');
+  assert.ok(handler.indexOf('await store.saveProfile({name:value,updatedAt})') < handler.indexOf('await user.updateProfile({displayName:value})'), 'persist the app profile before syncing Firebase Auth');
+  assert.match(handler, /Ник сохранён в профиле, но имя аккаунта не синхронизировалось/);
+});

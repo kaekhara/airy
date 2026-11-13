@@ -589,7 +589,7 @@ function renderDashboard(){
   homeRecommendationSkillId=recommendation.skillId;
   $('#homeDailyPhrase').textContent=recommendation.text;
   const tl=S.tl;$('#homeLevel').textContent=tl.L;$('#homeRank').textContent=rankOf(tl.L);$('#homePoints').textContent=num(S.total);$('#homeXp').textContent=num(S.total);
-  $('#homeXpFill').style.width=Math.round(tl.frac*100)+'%';$('#homeXpNext').textContent=tl.L>=10?'Максимальный уровень достигнут':num(S.total-tl.lo)+' / '+num(tl.hi-tl.lo)+' опыта до следующего уровня';
+  $('#homeXpFill').style.width=Math.round(tl.frac*100)+'%';$('#homeXpNext').textContent=num(S.total-tl.lo)+' / '+num(tl.hi-tl.lo)+' опыта до следующего уровня';
   const weekStart=addDays(today,-6),monthStart=today.slice(0,7)+'-01',countRange=(start,counts)=>Object.entries(counts||{}).reduce((total,[day,count])=>total+(day>=start&&day<=today?(Number(count)||0):0),0),proofDay=proof=>typeof proof.day==='string'?proof.day:dayKey(Number(proof.ts)||Date.now()),weekCount=store.summary?countRange(weekStart,store.summary.dayCounts):store.proofs.filter(proof=>{const day=proofDay(proof);return day>=weekStart&&day<=today;}).length,monthCount=store.summary?countRange(monthStart,store.summary.dayCounts):store.proofs.filter(proof=>{const day=proofDay(proof);return day>=monthStart&&day<=today;}).length,summaryPending=store.mode==='db'&&!store.summary&&!store.summaryError,insightHint=store.summaryError?'Сводка сервера недоступна: показаны данные из загруженных записей.':summaryPending?'Загружается полная сводка; пока показаны данные из загруженных записей.':'';
   [$('#homeWeekInsight'),$('#homeMonthInsight')].forEach(insight=>{insight.setAttribute('aria-busy',String(summaryPending));insight.title=insightHint;});
   $('#homeWeekInsight b').textContent=num(weekCount);$('#homeMonthInsight b').textContent=num(monthCount);
@@ -1593,13 +1593,14 @@ $('#journalList').addEventListener('click',async e=>{
 });
 
 /* ---------- awards + profile ---------- */
-function awardProgress(id,s){
-  const award=allAchievementDefinitions().find(item=>item.id===id);if(!award)return{value:0,target:1,unit:'шаг',ratio:0};
+function awardProgress(awardOrId,s,definitions=allAchievementDefinitions()){
+  const award=typeof awardOrId==='string'?definitions.find(item=>item.id===awardOrId):awardOrId;if(!award)return{value:0,target:1,unit:'шаг',ratio:0};
   const value=achievementValue(award,s),target=award.target;return{value,target,unit:award.unit,ratio:target?Math.max(0,Math.min(1,value/target)):1};
 }
-let awardsVisibleLimit=120;
-function renderNextAwards(s,got){
-  const goals=ACH.filter(a=>!got.has(a.id)&&!a.secret).map(a=>({award:a,progress:awardProgress(a.id,s)})).sort((a,b)=>b.progress.ratio-a.progress.ratio).slice(0,3);
+const AWARD_PAGE_SIZE=36;
+let awardsVisibleLimit=AWARD_PAGE_SIZE;
+function renderNextAwards(s,got,definitions){
+  const goals=definitions.filter(a=>!got.has(a.id)&&!a.secret).map(a=>({award:a,progress:awardProgress(a,s,definitions)})).sort((a,b)=>b.progress.ratio-a.progress.ratio).slice(0,3);
   const root=$('#nextAwards');
   if(!goals.length){root.innerHTML='<p class="next-awards-empty">Все награды собраны. Твоя коллекция полностью расцвела.</p>';return;}
   root.innerHTML='<div class="next-award-list">'+goals.map(({award,progress})=>{
@@ -1613,18 +1614,18 @@ function renderAwards(){
   const ledger=(store.profile&&store.profile.achievementUnlocks)||{},got=new Set([...S.ach,...Object.keys(ledger)]);
   const definitions=allAchievementDefinitions();
   $('#achCount').textContent='Получено '+got.size+' из '+definitions.length;
-  renderNextAwards(S,got);
+  renderNextAwards(S,got,definitions);
   const visibleAwards=definitions.filter(award=>!award.secret||got.has(award.id));
   const category=$('#achievementCategory'),previousCategory=category.value||'all',categories=Array.from(new Set(visibleAwards.map(award=>award.category))).sort((a,b)=>a.localeCompare(b,'ru')),selected=previousCategory==='all'||categories.includes(previousCategory)?previousCategory:'all',optionValues=['all',...categories];
   if(optionValues.length!==category.options.length||optionValues.some((value,index)=>category.options[index]?.value!==value))category.replaceChildren(new Option('Все категории','all'),...categories.map(name=>new Option(name,name)));
   const query=$('#achievementSearch').value.trim().toLocaleLowerCase('ru-RU'),matches=visibleAwards.filter(award=>(selected==='all'||award.category===selected)&&(!query||(award.n+' '+award.d+' '+award.category+' '+award.rarity+' '+award.reward.title).toLocaleLowerCase('ru-RU').includes(query))),rendered=matches.slice(0,awardsVisibleLimit);
   category.value=selected;
   $('#achievementFilterStatus').textContent=query||selected!=='all'||matches.length>rendered.length?`Показано ${rendered.length} из ${matches.length}`:'';
-  $('#badges').innerHTML=matches.length?rendered.map(a=>{const earned=got.has(a.id),progress=awardProgress(a.id,S),pct=earned?100:Math.round(progress.ratio*100),date=ledger[a.id]&&ledger[a.id].at?new Date(ledger[a.id].at).toLocaleDateString('ru-RU'):'Ранее получено';return '<div class="badge '+(earned?'on':'')+' rarity-'+esc(a.rarity.toLowerCase())+'" data-achievement="'+esc(a.id)+'"><div class="gl" aria-hidden="true">'+esc(a.g)+'</div><b>'+esc(a.n)+'</b><span>'+esc(a.d)+'</span><small>'+esc(a.rarity)+(earned?' · '+esc(date):' · '+pct+'%')+'</small><div class="badge-progress" role="progressbar" aria-label="Прогресс: '+esc(a.n)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><i style="width:'+pct+'%"></i></div><em>'+esc(a.reward.title)+'</em></div>';}).join('')+(matches.length>rendered.length?'<button type="button" class="btn small achievements-load-more" id="achievementsLoadMore">Показать ещё '+Math.min(120,matches.length-rendered.length)+' · осталось '+(matches.length-rendered.length)+'</button>':''):'<p class="achievement-empty">Награды не найдены. Измени поиск или выбери другую категорию.</p>';
+  $('#badges').innerHTML=matches.length?rendered.map(a=>{const earned=got.has(a.id),progress=awardProgress(a,S,definitions),pct=earned?100:Math.round(progress.ratio*100),date=ledger[a.id]&&ledger[a.id].at?new Date(ledger[a.id].at).toLocaleDateString('ru-RU'):'Ранее получено';return '<div class="badge '+(earned?'on':'')+' rarity-'+esc(a.rarity.toLowerCase())+'" data-achievement="'+esc(a.id)+'"><div class="gl" aria-hidden="true">'+esc(a.g)+'</div><b>'+esc(a.n)+'</b><span>'+esc(a.d)+'</span><small>'+esc(a.rarity)+(earned?' · '+esc(date):' · '+pct+'%')+'</small><div class="badge-progress" role="progressbar" aria-label="Прогресс: '+esc(a.n)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><i style="width:'+pct+'%"></i></div><em>'+esc(a.reward.title)+'</em></div>';}).join('')+(matches.length>rendered.length?'<button type="button" class="btn small achievements-load-more" id="achievementsLoadMore">Показать ещё '+Math.min(AWARD_PAGE_SIZE,matches.length-rendered.length)+' · осталось '+(matches.length-rendered.length)+'</button>':''):'<p class="achievement-empty">Награды не найдены. Измени поиск или выбери другую категорию.</p>';
 }
-$('#achievementSearch').addEventListener('input',()=>{awardsVisibleLimit=120;renderAwards();});
-$('#achievementCategory').addEventListener('change',()=>{awardsVisibleLimit=120;renderAwards();});
-$('#badges').addEventListener('click',event=>{if(!event.target.closest('#achievementsLoadMore'))return;awardsVisibleLimit+=120;renderAwards();$('#achievementsLoadMore')?.focus();});
+$('#achievementSearch').addEventListener('input',()=>{awardsVisibleLimit=AWARD_PAGE_SIZE;renderAwards();});
+$('#achievementCategory').addEventListener('change',()=>{awardsVisibleLimit=AWARD_PAGE_SIZE;renderAwards();});
+$('#badges').addEventListener('click',event=>{if(!event.target.closest('#achievementsLoadMore'))return;awardsVisibleLimit+=AWARD_PAGE_SIZE;renderAwards();$('#achievementsLoadMore')?.focus();});
 function renderCosmeticInventory(){
   const profile=store.profile||{},items=window.AiryCosmeticInventory.build(allAchievementDefinitions(),profile.achievementUnlocks,profile.unlockedTitles);
   const query=$('#cosmeticInventorySearch').value.trim().toLocaleLowerCase('ru-RU'),rarity=$('#cosmeticInventoryRarity').value,active=profile.activeTitle||'',matches=items.filter(item=>(rarity==='all'||item.rarity===rarity)&&(!query||(item.title+' '+item.name+' '+item.category+' '+item.rarity).toLocaleLowerCase('ru-RU').includes(query)));
@@ -1865,7 +1866,20 @@ async function saveProfileName(input,button,feedback){
   const value=input.value.trim().replace(/\s+/g,' ').slice(0,24);feedback.textContent='';
   if(!value){feedback.textContent='Введи ник длиной от 1 до 24 символов.';input.focus();return;}
   const original=button.textContent;button.disabled=true;button.textContent='Сохраняю…';
-  try{const user=store.auth&&store.auth.currentUser;if(user)await user.updateProfile({displayName:value});await store.saveProfile({name:value,updatedAt:Date.now()});store.profile=Object.assign({},store.profile,{name:value,updatedAt:Date.now()});renderProfile();feedback.textContent='Ник сохранён. Мика будет обращаться к тебе по имени «'+value+'».';toast('Профиль обновлён.');}
+  try{
+    const user=store.auth&&store.auth.currentUser,updatedAt=Date.now();
+    // The Firestore profile is canonical for Airi. Save it before the optional
+    // Firebase Auth display name so a failed profile write cannot leave the two
+    // identities disagreeing after the UI reports an error.
+    await store.saveProfile({name:value,updatedAt});
+    store.profile=Object.assign({},store.profile,{name:value,updatedAt});
+    renderProfile();
+    if(user){
+      try{await user.updateProfile({displayName:value});}
+      catch{feedback.textContent='Ник сохранён в профиле, но имя аккаунта не синхронизировалось. Обнови страницу и попробуй ещё раз.';toast('Профиль сохранён; имя аккаунта пока не синхронизировано.','error');return;}
+    }
+    feedback.textContent='Ник сохранён. Мика будет обращаться к тебе по имени «'+value+'».';toast('Профиль обновлён.');
+  }
   catch(error){feedback.textContent=cloudError(error);}
   finally{button.disabled=false;button.textContent=original;}
 }

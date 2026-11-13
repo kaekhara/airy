@@ -106,6 +106,25 @@ test('settings is a standalone view and archive is opened only from settings', (
   assert.match(html, /prefers-reduced-motion:reduce\)[\s\S]*?button:not\(:disabled\):hover,button:not\(:disabled\):active\{translate:none!important;scale:none!important\}/, 'button motion respects reduced-motion preferences');
 });
 
+test('achievement catalog renders in small pages and keeps loading/search paging consistent', () => {
+  const app = readFileSync(new URL('../public/upskill-app.js', import.meta.url), 'utf8');
+  assert.match(app, /const AWARD_PAGE_SIZE=36;\s*let awardsVisibleLimit=AWARD_PAGE_SIZE;/);
+  assert.match(app, /matches\.slice\(0,awardsVisibleLimit\)/);
+  assert.match(app, /Math\.min\(AWARD_PAGE_SIZE,matches\.length-rendered\.length\)/);
+  assert.match(app, /awardsVisibleLimit=AWARD_PAGE_SIZE;renderAwards\(\)/, 'search and category changes should reset paging');
+  assert.match(app, /awardsVisibleLimit\+=AWARD_PAGE_SIZE;renderAwards\(\)/, 'load more should reveal the next page');
+  assert.match(app, /const definitions=allAchievementDefinitions\(\);[\s\S]*?renderNextAwards\(S,got,definitions\)/, 'one up-to-date definition list should serve the whole render pass');
+  assert.match(app, /map\(a=>\(\{award:a,progress:awardProgress\(a,s,definitions\)\}\)\)/, 'next-award progress should reuse the shared definition list');
+  assert.match(app, /progress=awardProgress\(a,S,definitions\)/, 'card progress should use its already-resolved definition');
+});
+
+test('global account level progress stays uncapped while skill levels may have their own cap', () => {
+  const app = readFileSync(new URL('../public/upskill-app.js', import.meta.url), 'utf8');
+  assert.match(app, /function tlv\(xp\)\{const v=ACH\.levelForXp\(xp,60\);/);
+  assert.match(app, /homeXpNext'\)\.textContent=num\(S\.total-tl\.lo\)\+' \/ '\+num\(tl\.hi-tl\.lo\)\+' опыта до следующего уровня'/);
+  assert.doesNotMatch(app, /tl\.L>=10\?'Максимальный уровень достигнут'/, 'the uncapped global RPG level must not be shown as maxed at level 10');
+});
+
 test('light theme keeps the selected glass tab icon and label high contrast', () => {
   const html = readFileSync(new URL('../public/upskill.html', import.meta.url), 'utf8');
   assert.match(html, /body\[data-theme-mode="day"\] \.node\.locked\{opacity:\.92;background:#ece8ef;[^}]*color:#514a58\}/, 'locked skill nodes should remain visually distinct without fading their labels in the light theme');
