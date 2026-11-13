@@ -11,3 +11,9 @@ test('Mika has an explicit excited state and maps it from the reply tone', () =>
   assert.equal(persona.inferMikaExpression('Хм, давай разберём это спокойно.'), 'think');
   assert.equal(persona.inferMikaExpression('Обычный ответ без яркой эмоции.'), null);
 });
+
+test('ordinary praise with emphatic punctuation stays happy; explicit hyperbole is crazy', () => {
+  assert.equal(persona.inferMikaExpression('Гениально! Ты отлично справился!!!'), 'happy');
+  assert.equal(persona.inferMikaExpression('Это просто безумие, я не могу поверить!'), 'crazy');
+  assert.equal(persona.inferMikaExpression('С ума сойти, какой результат!'), 'crazy');
+});

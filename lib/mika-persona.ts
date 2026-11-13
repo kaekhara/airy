@@ -17,7 +17,9 @@ export function inferMikaExpression(text: string): MikaExpression | null {
   if (/(?:я устала|сама устала|хочу спать|сонн|зеваю|зевнула)/.test(value)) return 'sleepy';
   if (/(?:не могу усидеть|вперёд!|вперед!|урааа|азарт|так захватывающе|хочу скорее начать)/.test(value)) return 'excited';
   if (/(?:ура|поздравля|молодец|круто|отлично|здорово|рада за тебя|получилось)/.test(value)) return 'happy';
-  if (/(?:абсолютно безум|это безумие|невозможно поверить|!!!|гениальн)/.test(value)) return 'crazy';
+  // Reserve the exaggerated sprite for explicit hyperbole. Punctuation and
+  // ordinary praise (for example, "гениально!") should stay happy instead.
+  if (/(?:абсолютно безум|это (?:просто )?безумие|с ума сойти|я сейчас взорвусь|мозг взрывается)/.test(value)) return 'crazy';
   if (/(?:хм|думаю|кажется|возможно|не уверен|давай разбер|интересно,)/.test(value)) return 'think';
   if (/(?:ладно|спокойно|ну что ж|пожалуй)/.test(value)) return 'cool';
   return null;
