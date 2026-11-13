@@ -15,7 +15,7 @@ The server routes are enabled only when a private Admin credential is configured
    Keep the downloaded JSON outside the repository and copy its contents into the environment variable. `.vercelignore` also excludes `.env*` files and common Firebase service-account JSON filenames as a second guard for CLI uploads.
 3. Redeploy and confirm signed-in practice creation, edit/delete, local-data import, and sharing work through the server routes.
 
-4. Publish the repository's `firestore.rules`. Until you publish them, the live Firestore database continues using its existing rules. Once published, users need the Admin credential configured for practice, import, and share counters; ordinary profile preferences still save directly under owner-only rules.
+4. Publish the repository's `firestore.rules`. The checked-in `firebase.json` points the Firebase CLI to that rules file, and `.firebaserc` selects the existing `upskillairy` project. After signing in to Firebase CLI with `firebase login`, run `firebase deploy --only firestore:rules` from the repository root. This replaces the rules currently published in Firestore, so review the file first. Until deployment, the live database continues using its existing rules. Once published, users need the Admin credential configured for practice, import, and share counters; ordinary profile preferences still save directly under owner-only rules.
 
 ## One-time Firebase setup
 

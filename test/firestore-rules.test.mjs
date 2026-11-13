@@ -35,3 +35,10 @@ test('Firestore profile rules isolate account data and keep reward records serve
 test('practice history is owner-readable and only server routes can write it', () => {
   assert.match(rules, /match \/proofs\/\{proofId\}\s*\{\s*allow read: if request\.auth != null && request\.auth\.uid == userId;\s*\/\/ Practice records are written and rewarded only by authenticated server routes\.\s*allow write: if false;/);
 });
+
+test('Firebase CLI targets the existing project and deploys the reviewed Firestore rules file', () => {
+  const firebaseConfig = JSON.parse(readFileSync(new URL('../firebase.json', import.meta.url), 'utf8'));
+  const projectConfig = JSON.parse(readFileSync(new URL('../.firebaserc', import.meta.url), 'utf8'));
+  assert.equal(firebaseConfig.firestore.rules, 'firestore.rules');
+  assert.equal(projectConfig.projects.default, 'upskillairy');
+});
