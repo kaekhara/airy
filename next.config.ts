@@ -1,10 +1,6 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Firebase Admin's Auth path pulls in jwks-rsa (CommonJS) which requires
-  // jose (ESM). Bundle the SDK so Next's module bridge doesn't attempt a
-  // CommonJS require of jose at function startup.
-  transpilePackages: ['firebase-admin'],
   async headers() {
     return [
       {
