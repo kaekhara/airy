@@ -26,6 +26,14 @@ test('editing an existing practice never changes the XP already awarded', () => 
   assert.equal(rpg.practiceEditXp(-1, 37), 37);
 });
 
+test('only recurring quest types contribute a quest completion XP bonus', () => {
+  assert.equal(rpg.questCompletionBonus('daily'), 10);
+  assert.equal(rpg.questCompletionBonus('weekly'), 10);
+  assert.equal(rpg.questCompletionBonus('boss'), 10);
+  assert.equal(rpg.questCompletionBonus('personal'), 0);
+  assert.equal(rpg.questCompletionBonus(undefined), 0);
+});
+
 test('streak XP is only awarded when practice advances the latest active date', () => {
   assert.equal(rpg.dailyStreakBonus('2026-11-12', '2026-11-12', 4), 0);
   assert.equal(rpg.dailyStreakBonus('2026-11-11', '2026-11-12', 4), 0);

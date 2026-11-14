@@ -1,6 +1,6 @@
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
 import { consumeServerRateLimit } from '@/lib/server-rate-limit';
-import { isSkillUnlocked, practiceEditXp, practiceXp, questEditEligibility } from '@/lib/rpg-engine';
+import { isSkillUnlocked, practiceEditXp, practiceXp, questCompletionBonus, questEditEligibility } from '@/lib/rpg-engine';
 import { isSkillProfileGraphValid } from '@/lib/rpg-skills';
 import { achievementMetricsFromSummary, buildRpgSummary, mutateRpgSummary, rebuildRpgSummaryAfterMutation, removeProofFromRpgSummary, unlockEligibleAchievementsFromMetrics } from '@/lib/rpg-achievements';
 import { readBoundedRequestText } from '@/lib/bounded-request';
@@ -134,6 +134,7 @@ async function mutate(request: Request, context: { params: Promise<{ eventId: st
         const skillInfo = skillDefinition(profile, skill);
         if (!skillInfo || (skillInfo.branchId !== skill && !skillDefinition(profile, skillInfo.branchId))) throw new Error('SKILL_LOCKED');
         const questId = typeof existing.quest === 'string' ? existing.quest : '';
+        let questPeriod: unknown;
         if (questId) {
           const currentQuest = Array.isArray(profile.quests)
             ? (profile.quests as Array<Record<string, unknown>>).find((item) => item.id === questId)
@@ -141,6 +142,7 @@ async function mutate(request: Request, context: { params: Promise<{ eventId: st
           const history = Array.isArray(profile.questHistory) ? profile.questHistory as Array<Record<string, unknown>> : [];
           const completion = history.find((item) => item.id === questId || item.eventId === eventId);
           const source = currentQuest || completion;
+          questPeriod = source?.period;
           const savedRequirement = Number(source?.requiredMinutes);
           const requiredMinutes = Number.isFinite(savedRequirement) && savedRequirement > 0
             ? Math.max(0, Math.min(600, Math.round(savedRequirement)))
@@ -162,7 +164,7 @@ async function mutate(request: Request, context: { params: Promise<{ eventId: st
         if (!skillInfo.isBranch && !isSkillUnlocked({ branchXp: beforeSummary.branchXp[skillInfo.branchId] || 0, requiredBranchLevel: skillInfo.requiredLevel, prerequisites: skillInfo.prerequisites, skillXp: beforeSummary.skillXp })) throw new Error('SKILL_LOCKED');
         const images = Array.isArray(existing.imgs) ? existing.imgs : [];
         const bonus = Math.max(0, Math.min(10, Math.round(Number(existing.bonus) || 0)));
-        const questBonus = typeof existing.quest === 'string' && existing.quest ? 10 : 0;
+        const questBonus = questCompletionBonus(questPeriod);
         const recalculatedXp = practiceXp({ minutes, hasLink: Boolean(link), imageCount: images.length, textLength: text.length, difficulty: skillInfo.difficulty, questBonus, streakBonus: bonus });
         const xp = practiceEditXp(existing.xp, recalculatedXp);
         nextEntry = { ...existing, skill, text, min: minutes, link, xp, branchXp: skillInfo.isBranch ? xp : Math.round(xp * 0.4) };

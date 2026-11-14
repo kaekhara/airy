@@ -53,6 +53,7 @@ function loadRoute(services, observed, consumeServerRateLimit = async () => ({ a
     '@/lib/rpg-engine': {
       dailyStreakBonus,
       isSkillUnlocked: () => true,
+      questCompletionBonus: (period) => ['daily', 'weekly', 'boss'].includes(period) ? 10 : 0,
       practiceXp: (input) => { observed.imageCount = input.imageCount; observed.questBonus = input.questBonus; return 20 + input.imageCount * 5 + (input.questBonus || 0); },
       questEligibility,
     },

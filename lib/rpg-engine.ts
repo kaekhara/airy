@@ -22,6 +22,11 @@ export function practiceXp(input: PracticeInput): number {
     + Math.max(0, Math.min(10, Math.round(input.streakBonus || 0)));
 }
 
+/** Recurring quests award a completion bonus; personal quests do not. */
+export function questCompletionBonus(period: unknown): number {
+  return period === 'daily' || period === 'weekly' || period === 'boss' ? 10 : 0;
+}
+
 /** Award streak XP only when a proof advances the latest active calendar day. */
 export function dailyStreakBonus(day: unknown, lastDay: unknown, currentStreak: unknown): number {
   if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return 0;

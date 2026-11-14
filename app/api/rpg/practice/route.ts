@@ -1,5 +1,5 @@
 import { getFirebaseAdmin } from '@/lib/firebase-admin';
-import { dailyStreakBonus, isSkillUnlocked, practiceXp, questEligibility } from '@/lib/rpg-engine';
+import { dailyStreakBonus, isSkillUnlocked, practiceXp, questCompletionBonus, questEligibility } from '@/lib/rpg-engine';
 import { isSkillProfileGraphValid } from '@/lib/rpg-skills';
 import { addProofToRpgSummary, achievementMetricsFromSummary, buildRpgSummary, createRpgSummaryBuilder, unlockEligibleAchievementsFromMetrics } from '@/lib/rpg-achievements';
 import { appendQuestCompletion } from '@/lib/quest-history';
@@ -205,7 +205,7 @@ export async function POST(request: Request) {
         if (eligibility !== 'ok') throw new Error(`QUEST_${eligibility.toUpperCase()}`);
         if (quest.period === 'daily' || quest.period === 'weekly' || quest.period === 'boss') {
           if (!isCanonicalRecurringQuest(quest, profile, now, offset)) throw new Error('QUEST_INVALID');
-          questBonus = 10;
+          questBonus = questCompletionBonus(quest.period);
         }
         quests = quests.map((item: { id?: unknown }) => item.id === questId ? { ...item, done: true, completedAt: now } : item);
       }
