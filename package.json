@@ -31,6 +31,9 @@
   },
   "overrides": {
     "@grpc/grpc-js": "1.14.7",
-    "minimatch": "11.0.5"
+    "minimatch": "11.0.5",
+    "jwks-rsa": {
+      "jose": "4.15.9"
+    }
   }
 }
