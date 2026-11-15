@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
+import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
 
 const require = createRequire(import.meta.url);
 const locale = require('../public/ui-locale.js');
@@ -11,6 +13,30 @@ test('UI locale supports Russian, English, and Kazakh with Russian as fallback',
   assert.equal(locale.t('Главная', 'en'), 'Home');
   assert.equal(locale.t('Главная', 'kk'), 'Басты бет');
   assert.equal(locale.normalize('unsupported'), 'ru');
+});
+
+test('applying locale inside the embedded app notifies the parent without a missing global reference', async () => {
+  const source = await readFile(new URL('../public/ui-locale.js', import.meta.url), 'utf8');
+  const messages = [];
+  const document = {
+    nodeType: 9,
+    documentElement: { lang: '' },
+    body: null,
+    createTreeWalker: () => ({ nextNode: () => false }),
+  };
+  const context = {
+    document,
+    NodeFilter: { SHOW_TEXT: 4 },
+    window: {
+      location: { origin: 'https://airy-upskill.vercel.app' },
+      parent: { postMessage: (...args) => messages.push(args) },
+    },
+  };
+  runInNewContext(source, context);
+
+  assert.equal(context.AiryUiLocale.apply('kk', document), 'kk');
+  assert.equal(document.documentElement.lang, 'kk');
+  assert.equal(JSON.stringify(messages), JSON.stringify([[{ type: 'airy:locale', locale: 'kk' }, 'https://airy-upskill.vercel.app']]));
 });
 
 test('unknown or user-authored text is preserved verbatim', () => {

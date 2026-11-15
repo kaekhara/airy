@@ -1202,8 +1202,9 @@
       });
       observer.observe(doc.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['title', 'aria-label', 'placeholder'] });
     }
-    if (root.parent && root.parent !== root) {
-      try { root.parent.postMessage({ type: 'airy:locale', locale: activeLocale }, root.location.origin); } catch {}
+    const host = typeof window !== 'undefined' ? window : null;
+    if (host && host.parent && host.parent !== host) {
+      try { host.parent.postMessage({ type: 'airy:locale', locale: activeLocale }, host.location.origin); } catch {}
     }
     return activeLocale;
   }
