@@ -17,6 +17,7 @@ test('UI locale supports Russian, English, and Kazakh with Russian as fallback',
 
 test('applying locale inside the embedded app notifies the parent without a missing global reference', async () => {
   const source = await readFile(new URL('../public/ui-locale.js', import.meta.url), 'utf8');
+  const html = await readFile(new URL('../public/upskill.html', import.meta.url), 'utf8');
   const messages = [];
   const document = {
     nodeType: 9,
@@ -37,6 +38,7 @@ test('applying locale inside the embedded app notifies the parent without a miss
   assert.equal(context.AiryUiLocale.apply('kk', document), 'kk');
   assert.equal(document.documentElement.lang, 'kk');
   assert.equal(JSON.stringify(messages), JSON.stringify([[{ type: 'airy:locale', locale: 'kk' }, 'https://airy-upskill.vercel.app']]));
+  assert.match(html, /ui-locale\.js\?airy_asset_v=20261116-locale-fix/);
 });
 
 test('unknown or user-authored text is preserved verbatim', () => {
