@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const frame = await readFile(new URL('../app/experience-frame.tsx', import.meta.url), 'utf8');
 const app = await readFile(new URL('../public/upskill-app.js', import.meta.url), 'utf8');
+const firebaseConfig = await readFile(new URL('../public/firebase-config.js', import.meta.url), 'utf8');
 
 test('Next shell only hides loading state after the embedded app finishes booting', () => {
   assert.match(app, /measure\(\);\s*document\.documentElement\.dataset\.airyAppReady='true';/);
@@ -18,4 +19,10 @@ test('embedded app load timeout keeps a reachable retry action', () => {
   assert.match(frame, /Не удалось загрузить Upskill Airy/);
   assert.match(frame, /Попробовать ещё раз/);
   assert.match(frame, /setAttempt\(\(value\) => value \+ 1\)/);
+});
+
+test('Firebase startup is bounded so a slow auth provider cannot leave the app behind its loading screen', () => {
+  assert.match(firebaseConfig, /setTimeout\(\(\) => firebaseConfigController\.abort\(\), 3500\)/);
+  assert.match(app, /new Promise\(resolve=>\{persistenceTimer=setTimeout\(\(\)=>resolve\('timeout'\),2000\)/);
+  assert.match(app, /setTimeout\(resolve,4000\)/);
 });

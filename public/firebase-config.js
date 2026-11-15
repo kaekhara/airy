@@ -1,7 +1,9 @@
 // Firebase web keys are public identifiers. The server returns the
 // NEXT_PUBLIC_FIREBASE_* allowlist plus safe readiness booleans; credentials
 // are never exposed here.
-window.UPSKILL_FIREBASE_CONFIG_PROMISE = fetch('/api/firebase-config', { cache: 'no-store' })
+const firebaseConfigController = new AbortController();
+const firebaseConfigTimeout = setTimeout(() => firebaseConfigController.abort(), 3500);
+window.UPSKILL_FIREBASE_CONFIG_PROMISE = fetch('/api/firebase-config', { cache: 'no-store', signal: firebaseConfigController.signal })
   .then(async response => {
     if (!response.ok) return null;
     const payload = await response.json();
@@ -15,4 +17,5 @@ window.UPSKILL_FIREBASE_CONFIG_PROMISE = fetch('/api/firebase-config', { cache: 
       : null;
     return publicConfig;
   })
-  .catch(() => null);
+  .catch(() => null)
+  .finally(() => clearTimeout(firebaseConfigTimeout));

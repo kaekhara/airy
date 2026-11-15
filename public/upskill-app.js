@@ -230,7 +230,7 @@ function useCloudAccount(user){
     let loaded=0;const ready=()=>{if(++loaded===2){onData();resolve();}};let profileFirst=true,proofsFirst=true;
     store.unsubs.push(store.base.onSnapshot(snap=>{const previous=store.profile||{},next=snap.exists?Object.assign({},snap.data()):{},refreshSummary=!profileFirst&&rpgSummarySync.changed(previous,next);store.profile=next;if(!store.profile.name&&user.displayName){store.base.set({name:user.displayName},{merge:true}).catch(()=>{});}if(profileFirst){profileFirst=false;ready();}else onData();if(refreshSummary)void refreshRpgSummary(user);},err=>{if(profileFirst){profileFirst=false;ready();}$('#accountErrIn').textContent=cloudError(err);}));
     watchProofHistory(store.col,err=>$('#accountErrIn').textContent=cloudError(err),()=>{if(proofsFirst){proofsFirst=false;ready();}});
-    void refreshRpgSummary(user);setTimeout(resolve,6000);
+    void refreshRpgSummary(user);setTimeout(resolve,4000);
   });
 }
 async function initStore(){
@@ -248,8 +248,10 @@ async function initStore(){
   if(window.UPSKILL_FIREBASE_CONFIG&&window.firebase&&firebase.initializeApp&&firebase.auth&&firebase.firestore){
     try{if(!firebase.apps.length)firebase.initializeApp(window.UPSKILL_FIREBASE_CONFIG);store.auth=firebase.auth();store.firebaseReady=true;
       store.auth.languageCode='ru';
-      try{await store.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(persistenceError){console.warn('Persistent sign-in is unavailable; trying session persistence',persistenceError);try{await store.auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);}catch(sessionError){console.warn('Session persistence is unavailable; Firebase will use its current fallback',sessionError);}}
-      await new Promise(resolve=>{let first=true;store.auth.onAuthStateChanged(async u=>{try{await useCloudAccount(u);}catch(e){console.error('Account data could not load',e);}if(first){first=false;resolve();}},()=>{if(first){first=false;resolve();}});setTimeout(resolve,6000);});
+      let persistenceTimer;const persistenceResult=await Promise.race([store.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).then(()=> 'ready',error=>({error})),new Promise(resolve=>{persistenceTimer=setTimeout(()=>resolve('timeout'),2000);})]);clearTimeout(persistenceTimer);
+      if(persistenceResult==='timeout')console.warn('Firebase persistence setup timed out; continuing with the browser default.');
+      else if(persistenceResult&&persistenceResult.error){console.warn('Persistent sign-in is unavailable; trying session persistence',persistenceResult.error);let fallbackTimer;await Promise.race([store.auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(sessionError=>console.warn('Session persistence is unavailable; Firebase will use its current fallback',sessionError)),new Promise(resolve=>{fallbackTimer=setTimeout(resolve,1000);})]);clearTimeout(fallbackTimer);}
+      await new Promise(resolve=>{let first=true;store.auth.onAuthStateChanged(async u=>{try{await useCloudAccount(u);}catch(e){console.error('Account data could not load',e);}if(first){first=false;resolve();}},()=>{if(first){first=false;resolve();}});setTimeout(resolve,4000);});
     }catch(error){console.error('Firebase is not configured correctly',error);store.firebaseReady=false;store.mode='local';activateMikaScope('guest');lsLoad();}
   }else{store.mode='local';activateMikaScope('guest');lsLoad();}
 }

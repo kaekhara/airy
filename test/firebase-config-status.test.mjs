@@ -30,12 +30,17 @@ test('Firebase config loader preserves only the safe RPG readiness status for se
   const serverFeatures = { rpg: false, rpgStatus: 'project-mismatch', ai: true };
   const context = {
     window: {},
+    AbortController,
+    setTimeout,
+    clearTimeout,
     fetch: async () => ({ ok: true, json: async () => ({ apiKey: 'public-web-key', projectId: 'upskillairy', serverFeatures }) }),
   };
   runInNewContext(source, context);
   const config = await context.window.UPSKILL_FIREBASE_CONFIG_PROMISE;
   assert.deepEqual({ ...context.window.UPSKILL_SERVER_FEATURES }, serverFeatures);
   assert.deepEqual({ ...config }, { apiKey: 'public-web-key', projectId: 'upskillairy' });
+  assert.match(source, /setTimeout\(\(\) => firebaseConfigController\.abort\(\), 3500\)/);
+  assert.match(source, /signal: firebaseConfigController\.signal/);
 });
 
 test('server readiness rejects malformed or mismatched Firebase Admin credentials without returning secret content', async () => {
