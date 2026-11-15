@@ -8,7 +8,8 @@ const app = await readFile(new URL('../public/upskill-app.js', import.meta.url),
 test('Next shell only hides loading state after the embedded app finishes booting', () => {
   assert.match(app, /measure\(\);\s*document\.documentElement\.dataset\.airyAppReady='true';/);
   assert.match(frame, /documentElement\?\.dataset\.airyAppReady === "true"/);
-  assert.match(frame, /setInterval\(checkReady, 100\)/);
+  assert.match(frame, /frame\?\.addEventListener\("load", onLoad\)/);
+  assert.match(frame, /addEventListener\("airy:ready", onReady/);
   assert.doesNotMatch(frame, /onLoad=\{\(\) => \{\s*setLoaded\(true\)/);
 });
 

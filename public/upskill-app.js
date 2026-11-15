@@ -341,7 +341,7 @@ let taskCalendarMonth=new Date(new Date().getFullYear(),new Date().getMonth(),1)
 let launchMikaChat=()=>{};
 function toast(msg,tone){const t=$('#toast'),text=String(msg||''),kind=tone||(/не удалось|не получилось|ошиб|нельзя|проверь|заполнена/i.test(text)?'error':/сохран|готов|добав|обнов|удал|отправлен|получен|практик|вышел/i.test(text)?'success':'info'),copy=t.querySelector('.toast-copy');t.dataset.tone=kind;t.querySelector('.toast-mark').textContent=kind==='error'?'!':kind==='success'?'✓':'✦';copy.querySelector('b').textContent=kind==='error'?'Проверь':kind==='success'?'Готово':'Обрати внимание';copy.querySelector('span').textContent=text;t.hidden=false;if(kind==='error')playUiSound('error');else if(kind==='success'){const value=text.toLocaleLowerCase();playUiSound(/квест|quest/.test(value)?'quest':/практик|progress logged/.test(value)?'practice':/достижен|награда|achievement|reward/.test(value)?'award':/уровень|level/.test(value)?'level':'success');}clearTimeout(toast.t);toast.t=setTimeout(()=>{t.hidden=true;},4200);}
 function saveState(state,label){const el=$('#saveState');if(!el)return;clearTimeout(saveState.timer);el.hidden=!state;el.dataset.state=state||'';el.textContent=label||'';if(state==='saved')saveState.timer=setTimeout(()=>{el.hidden=true;},2600);}
-const MUSIC_TRACKS=['audio/sunlight-on-the-desk.mp3','audio/sunlight-on-the-desk-2.mp3'];
+const MUSIC_TRACKS=['audio/sunlight-on-the-desk.mp3?airy_asset_v=20261116','audio/sunlight-on-the-desk-2.mp3?airy_asset_v=20261116'];
 const MUSIC_FADE_SECONDS=5;
 const music={context:null,master:null,players:[],active:0,enabled:false,ready:false,loading:false,transitioning:false,started:false,fadeTimer:null,stopTimer:null,volume:.24};
 const sfx={context:null,enabled:false,volume:.28};
@@ -390,7 +390,7 @@ function applyMotionPreference(value){REDUCED=value==='reduced';document.body.da
 const persistPreference=AiryPreferenceWriter.createPreferenceWriter({getCurrent:profilePreferences,getScope:()=>store.mode+':'+(store.auth?.currentUser?.uid||store.accountUser?.uid||'guest'),save:preferences=>store.saveProfile({preferences}),onSaved:preferences=>{store.profile=Object.assign({},store.profile,{preferences});}});
 async function changeThemePreference(value){const mode=value==='day'?'day':'night',previous=profilePreferences().theme==='day'?'day':'night',select=$('#themeSetting'),button=$('#themeToggle');if(select)select.disabled=true;if(button)button.disabled=true;try{await AiryPreferenceWriter.applyPreferenceChange({previous,value:mode,apply:next=>{applyStageTheme(next);if(select)select.value=next;},persist:next=>persistPreference('theme',next)});}catch{toast('Не удалось сохранить тему. Возвращено последнее сохранённое значение.','error');}finally{if(select)select.disabled=false;if(button)button.disabled=false;}}
 $('#themeSetting').addEventListener('change',e=>changeThemePreference(e.target.value));
-$('#uiLanguage').addEventListener('change',async e=>{const input=e.target,previous=AiryUiLocale.normalize(profilePreferences().uiLanguage),value=AiryUiLocale.normalize(input.value);AiryUiLocale.apply(value);renderAll();renderHud();updateServerRuntimeStatus();input.disabled=true;try{await persistPreference('uiLanguage',value);toast(value==='en'?'Interface language saved.':value==='kk'?'Интерфейс тілі сақталды.':'Язык интерфейса сохранён.');}catch{input.value=previous;AiryUiLocale.apply(previous);renderAll();renderHud();updateServerRuntimeStatus();toast(value==='en'?'Could not save the interface language.':value==='kk'?'Интерфейс тілін сақтау мүмкін болмады.':'Не удалось сохранить язык интерфейса.','error');}finally{input.disabled=false;}});
+$('#uiLanguage').addEventListener('change',async e=>{const input=e.target,previous=AiryUiLocale.normalize(profilePreferences().uiLanguage),value=AiryUiLocale.normalize(input.value);store.profile.preferences={...(store.profile.preferences||{}),uiLanguage:value};AiryUiLocale.apply(value);renderAll();renderHud();updateServerRuntimeStatus();input.disabled=true;try{await persistPreference('uiLanguage',value);toast(value==='en'?'Interface language saved.':value==='kk'?'Интерфейс тілі сақталды.':'Язык интерфейса сохранён.');}catch{store.profile.preferences={...(store.profile.preferences||{}),uiLanguage:previous};input.value=previous;AiryUiLocale.apply(previous);renderAll();renderHud();updateServerRuntimeStatus();toast(value==='en'?'Could not save the interface language.':value==='kk'?'Интерфейс тілін сақтау мүмкін болмады.':'Не удалось сохранить язык интерфейса.','error');}finally{input.disabled=false;}});
 $('#motionSetting').addEventListener('change',async e=>{const input=e.target,previous=profilePreferences().reducedMotion?'reduced':'full',value=input.value;input.disabled=true;try{await AiryPreferenceWriter.applyPreferenceChange({previous,value,apply:next=>{input.value=next;applyMotionPreference(next);},persist:next=>persistPreference('reducedMotion',next==='reduced')});toast('Настройка анимаций сохранена.');}catch{toast('Не удалось сохранить настройку анимаций. Возвращено последнее сохранённое значение.','error');}finally{input.disabled=false;}});
 $('#musicVolume').addEventListener('input',e=>{const value=Math.max(0,Math.min(100,Number(e.target.value)||0));music.volume=value/100*.24;$('#musicVolumeValue').value=value+'%';$('#musicVolumeValue').textContent=value+'%';if(music.context&&music.master){const now=music.context.currentTime;music.master.gain.cancelScheduledValues(now);music.master.gain.setTargetAtTime(music.enabled?music.volume:0,now,.08);}});
 $('#musicVolume').addEventListener('change',async e=>{const input=e.target,previous=Math.max(0,Math.min(100,Number(profilePreferences().musicVolume)||0)),value=Math.max(0,Math.min(100,Number(input.value)||0)),apply=next=>{input.value=String(next);$('#musicVolumeValue').value=next+'%';$('#musicVolumeValue').textContent=next+'%';music.volume=next/100*.24;if(music.context&&music.master){const now=music.context.currentTime;music.master.gain.cancelScheduledValues(now);music.master.gain.setTargetAtTime(music.enabled?music.volume:0,now,.08);}};input.disabled=true;try{await AiryPreferenceWriter.applyPreferenceChange({previous,value,apply,persist:next=>persistPreference('musicVolume',next)});toast('Громкость сохранена.');}catch{toast('Не удалось сохранить громкость. Возвращено последнее сохранённое значение.','error');}finally{input.disabled=false;}});
@@ -539,10 +539,16 @@ function onData(){renderAll();}
 function renderAll(){
   buildTree();S=computeStats(store.proofs);
   ensureRecurringQuests();
-  renderHud();renderDashboard();renderTree();renderJournal();renderAwards();renderProfile();
-  if(activeTab==='archive'){renderSkillArchive();renderTreeArchive();renderAchievementArchive();renderQuestArchive();}
+  renderHud();renderVisibleTab(activeTab);
   applyMikaArt();
   if($('#ciOverlay').hidden)fillSkillSelect();
+}
+function renderVisibleTab(tab){
+  if(tab==='novel')renderDashboard();
+  else if(tab==='tree')renderTree();
+  else if(tab==='journal')renderJournal();
+  else if(tab==='ach'){renderAwards();renderProfile();}
+  else if(tab==='archive'){renderSkillArchive();renderTreeArchive();renderAchievementArchive();renderQuestArchive();}
 }
 function renderHud(){
   const t=S.tl;
@@ -659,6 +665,7 @@ function show(tab,silent){
   const previousTab=activeTab;
   activeTab=tab;
   $$('.view').forEach(v=>{v.hidden=(v.id!=='view-'+tab);});
+  renderVisibleTab(tab);
   if(!silent&&tab!==previousTab){const view=$('#view-'+tab);view.classList.remove('is-entering');void view.offsetWidth;view.classList.add('is-entering');playUiSound('navigation');}
   $$('#nav button, #sideNav button').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');});
   syncNavIndicator(tab);
@@ -1897,9 +1904,10 @@ const THEME_KEY='upskill-stage-theme-v1';
 function applyStageTheme(theme,persist=true){
   const mode=theme==='day'?'day':'night',button=$('#themeToggle'),icon=$('#themeIcon'),label=$('#themeLabel');
   $('#stage').dataset.time=mode;document.body.dataset.themeMode=mode;
-  const next=mode==='day'?'ночной':'дневной';
-  button.setAttribute('aria-label','Переключить на '+next+' фон');button.title='Переключить на '+next+' фон';button.setAttribute('aria-pressed',String(mode==='day'));
-  label.textContent=mode==='day'?'Ночь':'День';
+  const locale=window.AiryUiLocale?.getLocale?.()||'ru',next=mode==='day'?'night':'day';
+  const labels={ru:{night:'Переключить на ночной фон',day:'Переключить на дневной фон',nightName:'Ночь',dayName:'День'},en:{night:'Switch to night theme',day:'Switch to day theme',nightName:'Night',dayName:'Day'},kk:{night:'Түнгі көрініске ауысу',day:'Күндізгі көрініске ауысу',nightName:'Түн',dayName:'Күн'}}[locale];
+  button.setAttribute('aria-label',labels[next]);button.title=labels[next];button.setAttribute('aria-pressed',String(mode==='day'));
+  label.textContent=mode==='day'?labels.nightName:labels.dayName;
   icon.innerHTML=mode==='day'?'<path d="M20.2 15.2A8.5 8.5 0 0 1 8.8 3.8 8.6 8.6 0 1 0 20.2 15.2Z"/>':'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>';
   if(persist)try{localStorage.setItem(THEME_KEY,mode);}catch{}
 }
@@ -1976,5 +1984,6 @@ $('#mikaVersionOptions').addEventListener('click',async e=>{
   }else if(hasProgress&&!welcomeDone){try{localStorage.setItem(ONBOARDING_KEY,'done');}catch(e){}}
   measure();
   document.documentElement.dataset.airyAppReady='true';
+  document.dispatchEvent(new Event('airy:ready'));
 })();
 })();

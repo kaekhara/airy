@@ -1109,6 +1109,19 @@
     'поздняя ночь':'түн ортасы','утро':'таң','вечер':'кеш'
   });
 
+  Object.assign(dictionaries.en, {
+    'Ключи Firebase Admin и AI найдены на сервере. Доступ к Firestore проверяется при серверной записи.':'Firebase Admin and AI keys are present on the server. Firestore access is checked when a server save runs.',
+    'Серия активности: 0 дней':'Activity streak: 0 days','Навыков в древе:':'Skills in tree:',
+    'Переключить на ночной фон':'Switch to night theme','Переключить на дневной фон':'Switch to day theme',
+    'Пн':'Mon','Вт':'Tue','Ср':'Wed','Чт':'Thu','Пт':'Fri','Сб':'Sat','Вс':'Sun'
+  });
+  Object.assign(dictionaries.kk, {
+    'Ключи Firebase Admin и AI найдены на сервере. Доступ к Firestore проверяется при серверной записи.':'Firebase Admin және AI кілттері серверде бар. Firestore қолжетімділігі серверге сақтау кезінде тексеріледі.',
+    'Серия активности: 0 дней':'Белсенділік сериясы: 0 күн','Навыков в древе:':'Ағаштағы дағдылар:',
+    'Переключить на ночной фон':'Түнгі көрініске ауысу','Переключить на дневной фон':'Күндізгі көрініске ауысу',
+    'Пн':'Дс','Вт':'Сс','Ср':'Сә','Чт':'Бс','Пт':'Жм','Сб':'Сб','Вс':'Жс'
+  });
+
   function normalize(locale) { return supported.has(locale) ? locale : 'ru'; }
   function t(text, locale = activeLocale) {
     const source = String(text == null ? '' : text);
@@ -1188,6 +1201,9 @@
         }
       });
       observer.observe(doc.body, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['title', 'aria-label', 'placeholder'] });
+    }
+    if (root.parent && root.parent !== root) {
+      try { root.parent.postMessage({ type: 'airy:locale', locale: activeLocale }, root.location.origin); } catch {}
     }
     return activeLocale;
   }

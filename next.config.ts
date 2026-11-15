@@ -40,6 +40,24 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Versioned static assets can be cached for a year. The HTML shell and
+        // unversioned app bundle above remain revalidated to prevent stale UI.
+        source: '/:path*',
+        has: [
+          {
+            type: 'query',
+            key: 'airy_asset_v',
+            value: '(?<airyAssetVersion>.+)',
+          },
+        ],
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
     ];
   },
 };

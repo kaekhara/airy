@@ -13,9 +13,9 @@ test('public page inline scripts parse as JavaScript', () => {
     assert.doesNotThrow(() => new Function(source), `inline script ${index + 1} should parse`);
   }
 
-  assert.match(html, /<script\s+defer\s+src="\/upskill-app\.js"><\/script>/, 'the application script must load after its helper modules without blocking HTML parsing');
-  assert.match(html, /<script\s+defer\s+src="\/rpg-summary-sync\.js"><\/script>[\s\S]*?<script\s+defer\s+src="\/upskill-app\.js">/, 'summary sync helper must load before the app');
-  assert.match(html, /<script defer src="\/skill-node-limit\.js"><\/script>[\s\S]*?<script defer src="\/upskill-app\.js">/, 'tree size guard must load before the app');
+  assert.match(html, /<script\s+defer\s+src="\/upskill-app\.js(?:\?[^\"]*)?"><\/script>/, 'the application script must load after its helper modules without blocking HTML parsing');
+  assert.match(html, /<script\s+defer\s+src="\/rpg-summary-sync\.js(?:\?[^\"]*)?"><\/script>[\s\S]*?<script\s+defer\s+src="\/upskill-app\.js/, 'summary sync helper must load before the app');
+  assert.match(html, /<script defer src="\/skill-node-limit\.js(?:\?[^\"]*)?"><\/script>[\s\S]*?<script defer src="\/upskill-app\.js/, 'tree size guard must load before the app');
   const externalScripts = [...html.matchAll(/<script\b([^>]*)\bsrc="([^"]+)"[^>]*><\/script>/gi)];
   assert.ok(externalScripts.length >= 17, 'all runtime modules should be included in the inventory');
   externalScripts.forEach(([, attributes, source], index) => {
@@ -24,8 +24,8 @@ test('public page inline scripts parse as JavaScript', () => {
   });
   assert.ok(externalScripts.findIndex(([, , source]) => source.includes('firebase-app-compat')) < externalScripts.findIndex(([, , source]) => source.includes('firebase-auth-compat')));
   assert.ok(externalScripts.findIndex(([, , source]) => source.includes('firebase-auth-compat')) < externalScripts.findIndex(([, , source]) => source.includes('firebase-firestore-compat')));
-  assert.ok(externalScripts.findIndex(([, , source]) => source.includes('firebase-firestore-compat')) < externalScripts.findIndex(([, , source]) => source === '/firebase-config.js'));
-  assert.ok(externalScripts.findIndex(([, , source]) => source === '/rpg-summary-sync.js') < externalScripts.findIndex(([, , source]) => source === '/upskill-app.js'));
+  assert.ok(externalScripts.findIndex(([, , source]) => source.includes('firebase-firestore-compat')) < externalScripts.findIndex(([, , source]) => source.split('?')[0] === '/firebase-config.js'));
+  assert.ok(externalScripts.findIndex(([, , source]) => source.split('?')[0] === '/rpg-summary-sync.js') < externalScripts.findIndex(([, , source]) => source.split('?')[0] === '/upskill-app.js'));
   const applicationScript = readFileSync(new URL('../public/upskill-app.js', import.meta.url), 'utf8');
   assert.ok(applicationScript.trim(), 'the extracted application script must not be empty');
   assert.doesNotThrow(() => new Function(applicationScript), 'the extracted application script should parse');

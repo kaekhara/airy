@@ -54,7 +54,7 @@ test('export filters malformed friend entries and bounds public friend fields', 
 test('profile and settings export share the same full-export flow with a browser download fallback', async () => {
   const html = await readFile(new URL('../public/upskill.html', import.meta.url), 'utf8');
   const app = await readFile(new URL('../public/upskill-app.js', import.meta.url), 'utf8');
-  assert.ok(html.indexOf('src="/user-data-export.js"') < html.indexOf('src="/upskill-app.js"'));
+  assert.ok(html.indexOf('src="/user-data-export.js') < html.indexOf('src="/upskill-app.js'));
   assert.match(app, /fetch\('\/api\/rpg\/friends'/);
   assert.match(app, /AiryUserDataExport\.create\(/);
   assert.match(app, /if\(store\.downloads\)await store\.downloads\.save/);

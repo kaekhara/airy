@@ -37,5 +37,5 @@ test('large skill and quest archives render one page and expose working load-mor
   assert.match(app, /data-more-quest-archive/);
   assert.match(app, /skillArchiveLimit\+=ARCHIVE_PAGE_SIZE/);
   assert.match(app, /questArchiveLimit\+=ARCHIVE_PAGE_SIZE/);
-  assert.match(html, /<script defer src="\/archive-pagination\.js"><\/script>/);
+  assert.match(html, /<script defer src="\/archive-pagination\.js(?:\?[^\"]*)?"><\/script>/);
 });
