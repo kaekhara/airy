@@ -1,8 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { loadTsModule } from './load-ts.mjs';
+import { Firestore } from 'firebase-admin/firestore';
 
 const { consumeServerRateLimit } = loadTsModule('../lib/server-rate-limit.ts');
+
+test('rate-limit document paths are accepted by the real Firestore SDK before any network request', async () => {
+  const firestore = new Firestore({ projectId: 'airy-test' });
+  let path;
+  const db = {
+    doc(value) { const ref = firestore.doc(value); path = ref.path; return ref; },
+    async runTransaction(callback) {
+      return callback({ get: async () => ({ exists: false }), set() {} });
+    },
+  };
+  const result = await consumeServerRateLimit(db, 'test-user', 'quests', 1000, 40);
+  assert.equal(result.allowed, true);
+  assert.equal(path, 'data/users/test-user/profile/system/rate-quests');
+  await firestore.terminate();
+});
 
 function fakeFirestore() {
   const documents = new Map();

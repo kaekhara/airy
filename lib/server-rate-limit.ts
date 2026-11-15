@@ -11,7 +11,7 @@ export async function consumeServerRateLimit(
   if (!/^[\w-]{1,80}$/.test(bucket) || !/^[\w-]{1,160}$/.test(userId)) {
     throw new Error('INVALID_RATE_LIMIT_KEY');
   }
-  const ref = db.doc(`data/users/${userId}/system/rate-${bucket}`);
+  const ref = db.doc(`data/users/${userId}/profile/system/rate-${bucket}`);
   try {
     return await db.runTransaction(async (transaction) => {
       const snapshot = await transaction.get(ref);

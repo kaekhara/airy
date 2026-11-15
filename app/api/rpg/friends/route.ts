@@ -47,12 +47,15 @@ export async function GET(request: Request) {
   if (blocked) return blocked;
   try {
     const rows = await services.db.doc(`data/users/${user.uid}/profile`).collection('friends')
-      .where('status', '==', 'active').orderBy('since', 'desc').limit(50).get();
-    const friendIds = rows.docs.map((row) => row.id).filter((uid) => /^[\w-]{1,160}$/.test(uid));
+      .where('status', '==', 'active').limit(50).get();
+    // A single-field query works without a separately provisioned composite index.
+    const activeRows = rows.docs.filter((row) => /^[\w-]{1,160}$/.test(row.id))
+      .sort((a, b) => (Number(b.get('since')) || 0) - (Number(a.get('since')) || 0));
+    const friendIds = activeRows.map((row) => row.id);
     const profiles = await Promise.all(friendIds.map((uid) => services.db.doc(`data/users/${uid}/profile`).get()));
     const friends = friendIds.map((uid, index) => {
       const profile = profiles[index].exists ? profiles[index].data() || {} : {};
-      return { uid, name: safeFriendName(profile.name), avatar: safeFriendAvatar(profile.avatar), since: Number(rows.docs[index].get('since')) || 0 };
+      return { uid, name: safeFriendName(profile.name), avatar: safeFriendAvatar(profile.avatar), since: Number(activeRows[index].get('since')) || 0 };
     });
     return Response.json({ friends, truncated: rows.size === 50 }, { headers: noStore });
   } catch (error) {

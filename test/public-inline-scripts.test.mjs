@@ -182,16 +182,18 @@ test('cloud history stays paginated and skill-tree edge redraws are frame-coales
   assert.match(source, /activeBranchRect=branch\.hidden\?rr:branch\.getBoundingClientRect\(\)/, 'filtered leaves should connect to the visible root instead of an invisible branch');
   assert.match(source, /if\(generation!==edgeDrawGeneration\|\|!svg\.isConnected\)return/, 'a stale edge batch must stop after the tree is redrawn or filtered');
   assert.match(source, /edgeBatchFrame=requestAnimationFrame\(\(\)=>\{edgeBatchFrame=0;drawBatch\(\);\}\)/, 'remaining edge work should continue on later animation frames');
-  assert.match(source, /new ResizeObserver\(\(\)=>\{clampTreeCamera\(\);scheduleDrawEdges\(\);\}\)/, 'tree viewport resize should clamp the camera and use the frame-coalesced redraw');
-  assert.match(html, /id="treeViewport"[\s\S]*?id="treeCamera"[\s\S]*?id="tree"/, 'the skill map should have a bounded viewport and a transformable camera');
-  for (const control of ['treeZoomOut', 'treeZoomIn', 'treeZoomReset', 'treePanToggle']) {
+  assert.match(source, /new ResizeObserver\(\(\)=>scheduleDrawEdges\(\)\)/, 'tree viewport resize should redraw edge geometry');
+  assert.match(html, /\.tree-viewport\{[^}]*overflow:auto/, 'the skill map should scroll independently inside its bounded viewport');
+  assert.match(html, /id="treeViewport"[\s\S]*?id="treeCamera"[\s\S]*?id="tree"/, 'the skill map should retain its scrollable canvas wrapper');
+  for (const control of ['treeZoomOut', 'treeZoomIn', 'treeZoomReset']) {
     assert.match(html, new RegExp('id="' + control + '"'), control + ' should be available to operate the map');
   }
-  assert.match(source, /function setTreeZoom\(scale,anchorX,anchorY\)[\s\S]*?Math\.max\(\.65,Math\.min\(2\.2,scale\)\)/, 'zoom should stay within readable bounds and use the selected focal point');
-  assert.match(source, /treeViewport\.addEventListener\('keydown'/, 'the map should support keyboard navigation');
-  assert.match(source, /treeViewport\.addEventListener\('pointermove'/, 'the pan mode should track pointer movement');
+  assert.doesNotMatch(html, /treePanToggle|Переместить карту/, 'the interface should not offer pointer-drag panning');
+  assert.match(source, /function setTreeZoom\(scale\)[\s\S]*?Math\.max\(\.65,Math\.min\(2\.2,scale\)\)/, 'zoom should stay within readable bounds');
+  assert.match(source, /\$\('#treeCamera'\)\.style\.zoom=String\(treeCamera\.scale\)/, 'zoom should preserve the natural scroll dimensions');
+  assert.doesNotMatch(source, /treeViewport\.addEventListener\('pointer(?:down|move|up|cancel)'/, 'the tree should not capture pointer drags');
   assert.match(source, /\(a\.right-R\.left\)\/scale/, 'edge geometry should account for camera zoom');
-  assert.match(source, /body\[data-motion="reduced"\] \.tree-camera\{transition:none\}/, 'the user animation preference should disable camera motion');
+  assert.match(source, /body\[data-motion="reduced"\] \.tree-camera\{transition:none\}/, 'the user animation preference should disable zoom transitions');
   assert.match(html, /body\[data-motion="reduced"\] \*,body\[data-motion="reduced"\] \*::before,body\[data-motion="reduced"\] \*::after\{animation:none!important;transition:none!important;scroll-behavior:auto!important\}/, 'the user animation preference should disable transitions and animations throughout every screen');
   assert.match(html, /\.tree-viewport\{[^}]*touch-action:pan-y/, 'vertical page scrolling should remain available by default on touch screens');
 });

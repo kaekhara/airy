@@ -96,6 +96,7 @@ test('quest API makes add retries idempotent and rejects request id reuse with c
       const text = await request.text();
       return new TextEncoder().encode(text).byteLength > maxBytes ? null : text;
     } },
+    '@/lib/firestore-errors': { isFirestorePermissionDenied: (error) => [7, '7', 'permission-denied', 'PERMISSION_DENIED', 'firestore/permission-denied'].includes(error?.code) },
   };
   const { POST } = loadTsModule('../app/api/rpg/quests/route.ts', dependencies);
   const post = (requestId, quests) => POST(new Request('https://airy.test/api/rpg/quests', {

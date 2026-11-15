@@ -6,6 +6,7 @@ import { isSkillProfileGraphValid } from '@/lib/rpg-skills';
 import { isQuestDueAtValid, recurringQuestSpecs } from '@/lib/rpg-quests';
 import { archiveCompletedQuests } from '@/lib/quest-history';
 import { readBoundedRequestText } from '@/lib/bounded-request';
+import { isFirestorePermissionDenied } from '@/lib/firestore-errors';
 
 export const runtime = 'nodejs';
 
@@ -23,6 +24,16 @@ type Profile = Record<string, unknown>;
 
 function responseError(error: string, status: number) {
   return Response.json({ error }, { status, headers: { 'Cache-Control': 'no-store' } });
+}
+
+function firebaseFailure(error: unknown) {
+  const value = error && typeof error === 'object' ? error as { code?: unknown; message?: unknown } : {};
+  const rawCode = String(value.code ?? '').toLowerCase();
+  const code = rawCode.replaceAll('_', '-');
+  const message = String(value.message ?? '').toLowerCase();
+  if (isFirestorePermissionDenied(error) || message.includes('insufficient permissions')) return 'DATABASE_PERMISSION_DENIED';
+  if (code === 'unavailable' || code === 'firestore/unavailable' || code === '14' || message.includes('deadline exceeded')) return 'DATABASE_UNAVAILABLE';
+  return 'QUESTS_SAVE_FAILED';
 }
 
 function skillsFor(profile: Profile) {
@@ -85,7 +96,7 @@ export async function POST(request: Request) {
   try {
     const rate = await consumeServerRateLimit(services.db, user.uid, 'quests', Date.now(), 40);
     if (!rate.allowed) return Response.json({ error: 'RATE_LIMITED' }, { status: 429, headers: { 'Retry-After': String(rate.retryAfter), 'Cache-Control': 'no-store' } });
-  } catch { return responseError('RATE_LIMIT_UNAVAILABLE', 503); }
+  } catch (error) { return responseError(firebaseFailure(error) === 'DATABASE_PERMISSION_DENIED' ? 'DATABASE_PERMISSION_DENIED' : 'RATE_LIMIT_UNAVAILABLE', 503); }
 
   let body: { action?: unknown; offset?: unknown; quests?: unknown; requestId?: unknown; id?: unknown; dueAt?: unknown; skillIds?: unknown; profilePatch?: unknown; sourceId?: unknown };
   try {
@@ -205,7 +216,11 @@ export async function POST(request: Request) {
       IDEMPOTENCY_CONFLICT: [409, 'IDEMPOTENCY_CONFLICT'],
     };
     const [status, errorCode] = known[code] || [500, 'QUESTS_SAVE_FAILED'];
-    if (status === 500) console.error('[rpg-quests] mutation failed', { name: error instanceof Error ? error.name : 'UnknownError' });
+    if (status === 500) {
+      const databaseError = firebaseFailure(error);
+      console.error('[rpg-quests] mutation failed', { name: error instanceof Error ? error.name : 'UnknownError', code: error && typeof error === 'object' ? String((error as { code?: unknown }).code ?? '').slice(0, 60) : '' });
+      return responseError(databaseError, status);
+    }
     return responseError(errorCode, status);
   }
 }

@@ -49,6 +49,66 @@ test('static UI phrases translate across formatting whitespace without changing 
   assert.equal(locale.t('твой спутник в обучении', 'kk'), 'оқудағы серігің');
 });
 
+test('dynamic action labels and feedback stay localized in all supported interface languages', () => {
+  const cases = [
+    ['Сохраняю…', 'Saving…', 'Сақталуда…'],
+    ['Не удалось сохранить язык интерфейса.', 'Could not save the interface language.', 'Интерфейс тілін сақтау мүмкін болмады.'],
+    ['Приложи ссылку или изображение к записи.', 'Attach a link or image to the entry.', 'Жазбаға сілтеме немесе сурет тірке.'],
+    ['Дата начала должна быть раньше даты окончания.', 'The start date must be before the end date.', 'Басталу күні аяқталу күнінен бұрын болуы керек.'],
+    ['На этот день задач нет. Выбери дату со значком или открой «Квесты».', 'No tasks for this day. Choose a date with a marker or open Quests.', 'Бұл күнге тапсырма жоқ. Белгісі бар күнді таңда немесе «Квесттер» бөлімін аш.'],
+  ];
+  for (const [source, english, kazakh] of cases) {
+    assert.equal(locale.t(source, 'ru'), source);
+    assert.equal(locale.t(source, 'en'), english);
+    assert.equal(locale.t(source, 'kk'), kazakh);
+  }
+});
+
+test('achievement catalog labels and nested rewards translate as a complete unit', () => {
+  const catalog = require('../public/achievement-catalog.js');
+  assert.ok(catalog.length >= 100);
+  for (const award of catalog) {
+    for (const value of [award.n, award.d, award.category, award.rarity, award.reward.title]) {
+      assert.notEqual(locale.t(value, 'kk'), value, `Kazakh achievement label is missing: ${value}`);
+      if (!['Common', 'Uncommon', 'Rare', 'Epic', 'Legendary', 'Mythic'].includes(value)) {
+        assert.notEqual(locale.t(value, 'en'), value, `English achievement label is missing: ${value}`);
+      }
+    }
+  }
+  assert.equal(locale.t('Титул «Серия 3»', 'en'), 'Title “Streak 3”');
+  assert.equal(locale.t('Новое достижение · Шаг 1', 'kk'), 'Жаңа жетістік · Қадам 1');
+  assert.equal(locale.t('Достигни показателя: 10 веток', 'en'), 'Reach: 10 branches.');
+  assert.equal(locale.t('Подними уровень направления CYBER до 3', 'kk'), 'Киберқауіпсіздік бағытын 3-деңгейге көтер');
+});
+
+test('dashboard and streak copy stay localized when rendered from changing progress values', () => {
+  const cases = [
+    ['Уровень 4', 'Level 4', '4-деңгей'],
+    ['Серия 0 дней · ещё 1 день до стадии «первый бутон»', 'Streak: 0 days · 1 more day until “first bud”', 'Қатарынан: 0 күн · «алғашқы бүршік» кезеңіне дейін тағы 1 күн'],
+    ['Проведи 12 практик в удобном тебе темпе.', 'Complete 12 practice sessions at your own pace.', '12 жаттығуды өз қарқыныңмен орында.'],
+    ['Попробуй 3 разных направления.', 'Try 3 different branches.', '3 түрлі бағытты байқап көр.'],
+    ['Набери 600 XP за сезон.', 'Earn 600 XP this season.', 'Маусым ішінде 600 XP жина.'],
+    ['0 / 12 практик', '0 / 12 practices', '0 / 12 жаттығу'],
+  ];
+  for (const [source, english, kazakh] of cases) {
+    assert.equal(locale.t(source, 'en'), english, `English dashboard copy is missing: ${source}`);
+    assert.equal(locale.t(source, 'kk'), kazakh, `Kazakh dashboard copy is missing: ${source}`);
+  }
+  for (const source of ['История', '＋ Практика', 'Испытание сезона', 'Ритм без спешки', 'Широкий маршрут', 'Сезонный рывок', 'Сообщение Мике…']) {
+    assert.notEqual(locale.t(source, 'en'), source, `English label is missing: ${source}`);
+    assert.notEqual(locale.t(source, 'kk'), source, `Kazakh label is missing: ${source}`);
+  }
+});
+
+test('buttons allow long translated labels to wrap instead of overflowing their containers', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const html = await readFile(new URL('../public/upskill.html', import.meta.url), 'utf8');
+  assert.match(html, /\.btn\{[^}]*min-width:0/);
+  assert.match(html, /\.btn\{[^}]*max-width:100%/);
+  assert.match(html, /\.btn\{[^}]*white-space:normal/);
+  assert.match(html, /\.btn\{[^}]*overflow-wrap:anywhere/);
+});
+
 test('all Russian static page labels, placeholders, and accessibility names are translated', async () => {
   const { readFile } = await import('node:fs/promises');
   const html = (await readFile(new URL('../public/upskill.html', import.meta.url), 'utf8'))

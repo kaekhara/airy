@@ -53,6 +53,7 @@ test('quest sync moves completed legacy board entries to history without blockin
     '@/lib/rpg-quests': quests,
     '@/lib/quest-history': loadTsModule('../lib/quest-history.ts'),
     '@/lib/bounded-request': { readBoundedRequestText: (request) => request.text() },
+    '@/lib/firestore-errors': { isFirestorePermissionDenied: (error) => [7, '7', 'permission-denied', 'PERMISSION_DENIED', 'firestore/permission-denied'].includes(error?.code) },
   };
   const { POST } = loadTsModule('../app/api/rpg/quests/route.ts', dependencies);
   const response = await POST(new Request('https://airy.test/api/rpg/quests', {
@@ -94,6 +95,7 @@ test('permanently deleting a quest archive entry removes only archive metadata a
     '@/lib/rpg-quests': quests,
     '@/lib/quest-history': loadTsModule('../lib/quest-history.ts'),
     '@/lib/bounded-request': { readBoundedRequestText: (request) => request.text() },
+    '@/lib/firestore-errors': { isFirestorePermissionDenied: (error) => [7, '7', 'permission-denied', 'PERMISSION_DENIED', 'firestore/permission-denied'].includes(error?.code) },
   };
   const { POST } = loadTsModule('../app/api/rpg/quests/route.ts', dependencies);
   const response = await POST(new Request('https://airy.test/api/rpg/quests', {

@@ -7,13 +7,15 @@ const $=(s,r)=>(r||document).querySelector(s);
 const $$=(s,r)=>Array.from((r||document).querySelectorAll(s));
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
+const uiLocaleTag=()=>({ru:'ru-RU',en:'en-US',kk:'kk-KZ'})[window.AiryUiLocale?.getLocale?.()]||'ru-RU';
 const SYSTEM_REDUCED=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
 let REDUCED=SYSTEM_REDUCED;
 const dayKey=ts=>{const d=new Date(ts);return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());};
 const dayT=k=>{const p=k.split('-').map(Number);return new Date(p[0],p[1]-1,p[2],12).getTime();};
 const dayDiff=(a,b)=>Math.round((dayT(a)-dayT(b))/864e5);
 const addDays=(k,n)=>{const p=k.split('-').map(Number);return dayKey(new Date(p[0],p[1]-1,p[2]+n,12).getTime());};
-const num=n=>new Intl.NumberFormat('ru-RU').format(n);
+const num=n=>new Intl.NumberFormat(uiLocaleTag()).format(n);
+const countLabel=(count,ruForms,enForms,kkForm)=>{const locale=window.AiryUiLocale?.getLocale?.()||'ru',n=Math.abs(Number(count)||0);if(locale==='en')return `${num(count)} ${n===1?enForms[0]:enForms[1]}`;if(locale==='kk')return `${num(count)} ${kkForm}`;const whole=Math.floor(n)%100,last=whole%10,index=whole>=11&&whole<=14?2:last===1?0:last>=2&&last<=4?1:2;return `${num(count)} ${ruForms[index]}`;};
 
 /* ---------- skill tree data ---------- */
 const BASE=[
@@ -252,7 +254,7 @@ async function initStore(){
   }else{store.mode='local';activateMikaScope('guest');lsLoad();}
 }
 const PROFILE_AVATARS=['🌸','🌙','📚','🎧','🐈','✦'];
-function profileAvatarGlyph(avatar,name){return PROFILE_AVATARS.includes(avatar)?avatar:(String(name||'U').trim().charAt(0).toLocaleUpperCase('ru-RU')||'U');}
+function profileAvatarGlyph(avatar,name){return PROFILE_AVATARS.includes(avatar)?avatar:(String(name||'U').trim().charAt(0).toLocaleUpperCase(uiLocaleTag())||'U');}
 function updateAccountDialog(){
   const signed=!!store.accountUser;$('#accountSignedOut').hidden=signed;$('#accountSignedIn').hidden=!signed;
   const user=store.accountUser,name=signed?(store.profile.name||user.displayName||(user.email||'').split('@')[0]):'';
@@ -369,7 +371,7 @@ function applyMotionPreference(value){REDUCED=value==='reduced';document.body.da
 const persistPreference=AiryPreferenceWriter.createPreferenceWriter({getCurrent:profilePreferences,getScope:()=>store.mode+':'+(store.auth?.currentUser?.uid||store.accountUser?.uid||'guest'),save:preferences=>store.saveProfile({preferences}),onSaved:preferences=>{store.profile=Object.assign({},store.profile,{preferences});}});
 async function changeThemePreference(value){const mode=value==='day'?'day':'night',previous=profilePreferences().theme==='day'?'day':'night',select=$('#themeSetting'),button=$('#themeToggle');if(select)select.disabled=true;if(button)button.disabled=true;try{await AiryPreferenceWriter.applyPreferenceChange({previous,value:mode,apply:next=>{applyStageTheme(next);if(select)select.value=next;},persist:next=>persistPreference('theme',next)});}catch{toast('Не удалось сохранить тему. Возвращено последнее сохранённое значение.','error');}finally{if(select)select.disabled=false;if(button)button.disabled=false;}}
 $('#themeSetting').addEventListener('change',e=>changeThemePreference(e.target.value));
-$('#uiLanguage').addEventListener('change',async e=>{const input=e.target,previous=AiryUiLocale.normalize(profilePreferences().uiLanguage),value=AiryUiLocale.normalize(input.value);AiryUiLocale.apply(value);input.disabled=true;try{await persistPreference('uiLanguage',value);toast(value==='en'?'Interface language saved.':value==='kk'?'Интерфейс тілі сақталды.':'Язык интерфейса сохранён.');}catch{input.value=previous;AiryUiLocale.apply(previous);toast(value==='en'?'Could not save the interface language.':value==='kk'?'Интерфейс тілін сақтау мүмкін болмады.':'Не удалось сохранить язык интерфейса.','error');}finally{input.disabled=false;}});
+$('#uiLanguage').addEventListener('change',async e=>{const input=e.target,previous=AiryUiLocale.normalize(profilePreferences().uiLanguage),value=AiryUiLocale.normalize(input.value);AiryUiLocale.apply(value);renderAll();renderHud();updateServerRuntimeStatus();input.disabled=true;try{await persistPreference('uiLanguage',value);toast(value==='en'?'Interface language saved.':value==='kk'?'Интерфейс тілі сақталды.':'Язык интерфейса сохранён.');}catch{input.value=previous;AiryUiLocale.apply(previous);renderAll();renderHud();updateServerRuntimeStatus();toast(value==='en'?'Could not save the interface language.':value==='kk'?'Интерфейс тілін сақтау мүмкін болмады.':'Не удалось сохранить язык интерфейса.','error');}finally{input.disabled=false;}});
 $('#motionSetting').addEventListener('change',async e=>{const input=e.target,previous=profilePreferences().reducedMotion?'reduced':'full',value=input.value;input.disabled=true;try{await AiryPreferenceWriter.applyPreferenceChange({previous,value,apply:next=>{input.value=next;applyMotionPreference(next);},persist:next=>persistPreference('reducedMotion',next==='reduced')});toast('Настройка анимаций сохранена.');}catch{toast('Не удалось сохранить настройку анимаций. Возвращено последнее сохранённое значение.','error');}finally{input.disabled=false;}});
 $('#musicVolume').addEventListener('input',e=>{const value=Math.max(0,Math.min(100,Number(e.target.value)||0));music.volume=value/100*.24;$('#musicVolumeValue').value=value+'%';$('#musicVolumeValue').textContent=value+'%';if(music.context&&music.master){const now=music.context.currentTime;music.master.gain.cancelScheduledValues(now);music.master.gain.setTargetAtTime(music.enabled?music.volume:0,now,.08);}});
 $('#musicVolume').addEventListener('change',async e=>{const input=e.target,previous=Math.max(0,Math.min(100,Number(profilePreferences().musicVolume)||0)),value=Math.max(0,Math.min(100,Number(input.value)||0)),apply=next=>{input.value=String(next);$('#musicVolumeValue').value=next+'%';$('#musicVolumeValue').textContent=next+'%';music.volume=next/100*.24;if(music.context&&music.master){const now=music.context.currentTime;music.master.gain.cancelScheduledValues(now);music.master.gain.setTargetAtTime(music.enabled?music.volume:0,now,.08);}};input.disabled=true;try{await AiryPreferenceWriter.applyPreferenceChange({previous,value,apply,persist:next=>persistPreference('musicVolume',next)});toast('Громкость сохранена.');}catch{toast('Не удалось сохранить громкость. Возвращено последнее сохранённое значение.','error');}finally{input.disabled=false;}});
@@ -379,7 +381,7 @@ $('#effectsVolume').addEventListener('change',async e=>{const input=e.target,pre
 $('#settingsMusicToggle').addEventListener('click',toggleMusic);
 function syncAchievementNotificationControl(){const input=$('#achievementNotifications'),status=$('#notificationSettingsStatus');if(!input||!status)return;const supported='Notification'in window,allowed=supported&&Notification.permission==='granted';input.disabled=!supported||(!allowed&&Notification.permission==='denied');input.checked=profilePreferences().achievementNotifications===true&&allowed;status.textContent=!supported?'Этот браузер не поддерживает системные уведомления.':Notification.permission==='denied'?'Уведомления запрещены в настройках браузера.':allowed?'Разрешение браузера включено. Уведомления приходят только пока сайт открыт.':'При включении браузер спросит разрешение.';}
 $('#achievementNotifications').addEventListener('change',async e=>{const input=e.target,status=$('#notificationSettingsStatus'),previous=profilePreferences().achievementNotifications===true;input.disabled=true;try{if(input.checked){if(!('Notification'in window))throw new Error('Браузер не поддерживает уведомления.');const permission=Notification.permission==='default'?await Notification.requestPermission():Notification.permission;if(permission!=='granted')throw new Error(permission==='denied'?'Разреши уведомления для сайта в настройках браузера.':'Разрешение на уведомления не выдано.');}await persistPreference('achievementNotifications',input.checked);status.textContent=input.checked?'Системные уведомления о новых достижениях включены.':'Системные уведомления выключены.';toast(input.checked?'Уведомления о достижениях включены.':'Уведомления выключены.');}catch(error){input.checked=previous;status.textContent=error.message||'Не удалось сохранить настройку.';toast(status.textContent,'error');}finally{syncAchievementNotificationControl();}});
-function notifyNewAchievements(after,before){if(!profilePreferences().achievementNotifications||!('Notification'in window)||Notification.permission!=='granted')return;const old=new Set(before.ach||[]),fresh=allAchievementDefinitions().filter(award=>(after.ach||[]).includes(award.id)&&!old.has(award.id));fresh.slice(0,3).forEach(award=>{try{new Notification('Новое достижение · '+award.n,{body:award.d,icon:'/icons/airy-192.png',tag:'airy-achievement-'+award.id});}catch{}});}
+function notifyNewAchievements(after,before){if(!profilePreferences().achievementNotifications||!('Notification'in window)||Notification.permission!=='granted')return;const tr=window.AiryUiLocale?.t||((value)=>value),old=new Set(before.ach||[]),fresh=allAchievementDefinitions().filter(award=>(after.ach||[]).includes(award.id)&&!old.has(award.id));fresh.slice(0,3).forEach(award=>{try{new Notification(tr('Новое достижение · '+award.n),{body:tr(award.d),icon:'/icons/airy-192.png',tag:'airy-achievement-'+award.id});}catch{}});}
 async function saveMikaSetting(key,value){const input=key==='shareProgressWithMika'?$('#mikaProgressContext'):$('#mikaLanguage'),status=$('#mikaSettingsStatus'),previous=profilePreferences()[key];input.disabled=true;status.textContent='Сохраняю…';try{await persistPreference(key,value);status.textContent='Настройка сохранена в профиле.';toast('Настройка Мики сохранена.');}catch{if(key==='shareProgressWithMika')input.checked=previous!==false;else input.value=['auto','ru','en','kk'].includes(previous)?previous:'auto';status.textContent='Не удалось синхронизировать настройку с аккаунтом.';toast('Настройка не сохранена.','error');}finally{input.disabled=false;}}
 $('#mikaProgressContext').addEventListener('change',e=>saveMikaSetting('shareProgressWithMika',e.target.checked));
 $('#mikaLanguage').addEventListener('change',e=>saveMikaSetting('mikaLanguage',e.target.value));
@@ -444,7 +446,7 @@ async function mutateQuests(action,payload={}){
       intentKey=storageKey;intent=AiryQuestIdempotency.getOrCreateIntent(practiceStorage(),intentKey,fingerprint,newEventId);requestBody.requestId=intent.requestId;
     }
     const response=await fetch('/api/rpg/quests',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(requestBody)}),result=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(({QUEST_LIMIT:'Доска заполнена. Убери или заверши несколько активных квестов.',QUEST_ARCHIVE_LIMIT:'Достигнут предел удалённых записей. Продолжай скрывать ненужные записи.',SKILL_LOCKED:'Этот навык пока закрыт.',SKILL_GRAPH_INVALID:'В зависимостях древа есть ошибка.',QUEST_NOT_FOUND:'Запись квеста не найдена.',QUESTS_INVALID:'Проверь данные квеста.',IDEMPOTENCY_CONFLICT:'Запрос на добавление квеста изменился. Повтори добавление.',RATE_LIMITED:'Слишком много изменений подряд. Подожди немного.',SERVER_NOT_CONFIGURED:'Сервер квестов ещё не настроен.',SERVER_CONFIG_INVALID:'Не удалось подключить сервер квестов.',AUTH_REQUIRED:'Войди в аккаунт, чтобы изменить квесты.',INVALID_AUTH:'Сеанс истёк. Войди в аккаунт снова.'})[result.error]||'Не удалось сохранить квесты.');
+    if(!response.ok)throw new Error(({QUEST_LIMIT:'Доска заполнена. Убери или заверши несколько активных квестов.',QUEST_ARCHIVE_LIMIT:'Достигнут предел удалённых записей. Продолжай скрывать ненужные записи.',SKILL_LOCKED:'Этот навык пока закрыт.',SKILL_GRAPH_INVALID:'В зависимостях древа есть ошибка.',QUEST_NOT_FOUND:'Запись квеста не найдена.',QUESTS_INVALID:'Проверь данные квеста.',IDEMPOTENCY_CONFLICT:'Запрос на добавление квеста изменился. Повтори добавление.',RATE_LIMITED:'Слишком много изменений подряд. Подожди немного.',RATE_LIMIT_UNAVAILABLE:'Не удалось проверить частоту запросов. Проверь доступ сервера к Firestore и повтори попытку.',DATABASE_PERMISSION_DENIED:'Серверу не хватает прав на запись в Firestore. Для service account добавь роль Cloud Datastore User и дождись применения IAM.',DATABASE_UNAVAILABLE:'Firestore временно недоступен. Повтори попытку позже.',QUESTS_SAVE_FAILED:'Не удалось сохранить квесты на сервере. Повтори попытку; если ошибка повторится, проверь журнал функции /api/rpg/quests.',SERVER_NOT_CONFIGURED:'Сервер квестов ещё не настроен.',SERVER_CONFIG_INVALID:'Не удалось подключить сервер квестов.',AUTH_REQUIRED:'Войди в аккаунт, чтобы изменить квесты.',INVALID_AUTH:'Сеанс истёк. Войди в аккаунт снова.'})[result.error]||'Не удалось сохранить квесты.');
     if(intent)AiryQuestIdempotency.clearIntent(practiceStorage(),intentKey,intent.requestId,intent.fingerprint);
     store.profile=Object.assign({},store.profile||{},result.profilePatch||{},{quests:Array.isArray(result.quests)?result.quests:[]});
     return store.profile.quests;
@@ -533,8 +535,11 @@ function renderHud(){
   const streak=$('.streak'),days=Math.max(0,Number(S.streak)||0);
   const stages=[{at:30,tier:'legendary',name:'легендарное цветение'},{at:14,tier:'moonlit',name:'ночное цветение'},{at:7,tier:'radiant',name:'пышное цветение'},{at:3,tier:'bloom',name:'полное цветение'},{at:1,tier:'bud',name:'первый бутон'},{at:0,tier:'seed',name:'покой'}];
   const current=stages.find(stage=>days>=stage.at)||stages[stages.length-1],next=[...stages].reverse().find(stage=>stage.at>days);
+  const locale=window.AiryUiLocale?.getLocale?.()||'ru';
   const dayWord=n=>n%10===1&&n%100!==11?'день':n%10>=2&&n%10<=4&&(n%100<12||n%100>14)?'дня':'дней';
-  const description=next?`Серия ${days} ${dayWord(days)} · ещё ${next.at-days} ${dayWord(next.at-days)} до стадии «${next.name}»`:`Серия ${days} ${dayWord(days)} · высшая стадия сакуры`;
+  const stageName=locale==='en'?({legendary:'legendary bloom',moonlit:'moonlit bloom',radiant:'radiant bloom',bloom:'full bloom',bud:'first bud',seed:'rest'}[current.tier]):locale==='kk'?({legendary:'аңызға айналған гүлдеу',moonlit:'айлы гүлдеу',radiant:'жарқыраған гүлдеу',bloom:'толық гүлдеу',bud:'алғашқы бүршік',seed:'тынығу'}[current.tier]):current.name;
+  const nextStageName=locale==='en'?({legendary:'legendary bloom',moonlit:'moonlit bloom',radiant:'radiant bloom',bloom:'full bloom',bud:'first bud',seed:'rest'}[next?.tier]):locale==='kk'?({legendary:'аңызға айналған гүлдеу',moonlit:'айлы гүлдеу',radiant:'жарқыраған гүлдеу',bloom:'толық гүлдеу',bud:'алғашқы бүршік',seed:'тынығу'}[next?.tier]):next?.name;
+  const description=locale==='en'?(next?`Streak: ${days} day${days===1?'':'s'} · ${next.at-days} more day${next.at-days===1?'':'s'} until ${nextStageName}`:`Streak: ${days} day${days===1?'':'s'} · highest sakura stage`):locale==='kk'?(next?`Қатарынан: ${days} күн · ${next.at-days} күннен кейін «${nextStageName}» кезеңі`:`Қатарынан: ${days} күн · сакураның ең жоғары кезеңі`):(next?`Серия ${days} ${dayWord(days)} · ещё ${next.at-days} ${dayWord(next.at-days)} до стадии «${nextStageName}»`:`Серия ${days} ${dayWord(days)} · высшая стадия сакуры`);
   streak.dataset.streakTier=current.tier;streak.title=description;streak.setAttribute('aria-label',description);
 }
 function animatePracticeProgress(before,after,entry){
@@ -582,10 +587,11 @@ function dashboardBranches(){
 }
 function renderDashboard(){
   if(!S)return;
+  const tr=window.AiryUiLocale?.t||((text)=>text);
   const name=(store.profile&&store.profile.name)||(store.accountUser&&store.accountUser.displayName)||'';
   $('#homeName').textContent=name||'путешественник';
   const today=dayKey(Date.now());
-  const recommendation=window.AiryDailyRecommendation.buildDailyRecommendation({today,branches:TREE,skills:Object.values(SK),proofs:store.proofs,profile:store.profile,skillXp:S.xpBy,unlockedSkills:Array.from(S.unlocked),language:window.AiryUiLocale?.getLocale?.()||'ru'});
+  const recommendation=window.AiryDailyRecommendation.buildDailyRecommendation({today,branches:TREE.map(branch=>({...branch,name:tr(branch.name)})),skills:Object.values(SK).map(skill=>({...skill,name:tr(skill.name)})),proofs:store.proofs,profile:store.profile,skillXp:S.xpBy,unlockedSkills:Array.from(S.unlocked),language:window.AiryUiLocale?.getLocale?.()||'ru'});
   homeRecommendationSkillId=recommendation.skillId;
   $('#homeDailyPhrase').textContent=recommendation.text;
   const tl=S.tl;$('#homeLevel').textContent=tl.L;$('#homeRank').textContent=rankOf(tl.L);$('#homePoints').textContent=num(S.total);$('#homeXp').textContent=num(S.total);
@@ -602,7 +608,7 @@ function renderDashboard(){
   const icons=['✥','◉','⌘','✿','⌁','✧'];
   const branches=dashboardBranches(),skills=$('#homeSkills'),previousOrder=Array.from(skills.querySelectorAll('[data-branch-id]'),card=>card.dataset.branchId).join('|'),nextOrder=branches.map(b=>b.id).join('|');
   const pinned=new Set(store.profile?.pinnedBranches||[]);
-  skills.innerHTML=branches.length?branches.map((b,i)=>{const lvx=S.bl[b.id]||{L:1,frac:0},iconIndex=TREE.findIndex(x=>x.id===b.id);const pct=Math.round(lvx.frac*100);return '<article class="home-skill" data-branch-id="'+esc(b.id)+'" style="--skill-color:'+esc(b.c)+';--slot:'+i+'"><div class="home-skill-top"><span class="home-skill-icon" aria-hidden="true">'+icons[iconIndex%icons.length]+'</span><b title="'+esc(b.name)+'">'+esc(b.name)+'</b><button class="skill-pin'+(pinned.has(b.id)?' is-pinned':'')+'" type="button" data-pin="'+esc(b.id)+'" aria-pressed="'+pinned.has(b.id)+'" aria-label="'+(pinned.has(b.id)?'Открепить':'Закрепить')+' '+esc(b.name)+'" title="'+(pinned.has(b.id)?'Открепить навык':'Закрепить навык')+'">'+(pinned.has(b.id)?'★':'☆')+'</button></div><small>Уровень '+num(lvx.L)+'</small><div class="home-skill-track"><i style="width:'+pct+'%"></i></div><div class="home-skill-foot"><span>'+num(S.bxp[b.id]||0)+' XP · '+pct+'%</span></div><div class="home-skill-actions"><button type="button" data-skill-history="'+esc(b.id)+'">История</button><button type="button" data-skill-practice="'+esc(b.id)+'">＋ Практика</button></div></article>';}).join(''):'<div class="home-empty">Добавь первую ветку навыков в древе.</div>';
+  skills.innerHTML=branches.length?branches.map((b,i)=>{const lvx=S.bl[b.id]||{L:1,frac:0},iconIndex=TREE.findIndex(x=>x.id===b.id);const pct=Math.round(lvx.frac*100);return '<article class="home-skill" data-branch-id="'+esc(b.id)+'" style="--skill-color:'+esc(b.c)+';--slot:'+i+'"><div class="home-skill-top"><span class="home-skill-icon" aria-hidden="true">'+icons[iconIndex%icons.length]+'</span><b title="'+esc(tr(b.name))+'">'+esc(tr(b.name))+'</b><button class="skill-pin'+(pinned.has(b.id)?' is-pinned':'')+'" type="button" data-pin="'+esc(b.id)+'" aria-pressed="'+pinned.has(b.id)+'" aria-label="'+tr(pinned.has(b.id)?'Открепить':'Закрепить')+' '+esc(tr(b.name))+'" title="'+tr(pinned.has(b.id)?'Открепить навык':'Закрепить навык')+'">'+(pinned.has(b.id)?'★':'☆')+'</button></div><small>'+tr('Уровень')+' '+num(lvx.L)+'</small><div class="home-skill-track"><i style="width:'+pct+'%"></i></div><div class="home-skill-foot"><span>'+num(S.bxp[b.id]||0)+' XP · '+pct+'%</span></div><div class="home-skill-actions"><button type="button" data-skill-history="'+esc(b.id)+'">'+tr('История')+'</button><button type="button" data-skill-practice="'+esc(b.id)+'">'+tr('＋ Практика')+'</button></div></article>';}).join(''):'<div class="home-empty">'+tr('Добавь первую ветку навыков в древе.')+'</div>';
   if(previousOrder&&previousOrder!==nextOrder&&!REDUCED){skills.classList.add('is-shifting');clearTimeout(skills.shiftTimer);skills.shiftTimer=setTimeout(()=>skills.classList.remove('is-shifting'),620);}
   const recent=store.proofs.slice().sort((a,b)=>b.ts-a.ts).slice(0,3);
   $('#homeActivity').innerHTML=recent.length?recent.map(p=>'<article class="home-activity-row"><span class="home-activity-icon" aria-hidden="true">✓</span><div class="home-activity-copy"><b>'+esc((SK[p.skill]&&SK[p.skill].name)||'Практика')+'</b><small>'+esc(String(p.text||'Отмечен прогресс').slice(0,100))+'</small></div><span class="home-activity-xp">+'+num(p.xp||0)+' XP</span><time class="home-activity-time">'+esc(p.day||'')+'</time></article>').join(''):'<div class="home-empty">Твои первые шаги появятся здесь. Запиши практику и копи опыт — я замечу, конечно.</div>';
@@ -623,9 +629,9 @@ $$('[data-activity-range]').forEach(button=>button.addEventListener('click',()=>
 function renderSeasonChallenges(){
   const branchBySkill=Object.fromEntries(Object.entries(SK).map(([id,skill])=>[id,skill.branch]));
   const data=window.AirySeasonChallenges.build(Date.now(),store.proofs,store.summary,branchBySkill),note=$('#seasonChallengesNote');
-  const daysLeft=data.season.daysLeft,daysLabel=AiryRussianPlural.pluralForm(daysLeft,['день','дня','дней']);
-  note.textContent=`${data.season.name} · до ${new Date(data.season.end+'T12:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'})} · ${daysLeft?`осталось ${daysLeft} ${daysLabel}`:'последний день'}. Никаких ежедневных требований.`;
-  $('#seasonChallengeList').innerHTML=data.challenges.map(challenge=>'<article class="season-challenge'+(challenge.done?' is-done':'')+'"><div class="season-challenge-top"><span class="season-challenge-icon" aria-hidden="true">'+(challenge.done?'✓':'✦')+'</span><span class="season-challenge-state">'+(challenge.done?'Выполнено':'Испытание сезона')+'</span></div><h3>'+esc(challenge.title)+'</h3><p>'+esc(challenge.description)+'</p><div class="season-challenge-progress" role="progressbar" aria-label="'+esc(challenge.title)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+challenge.progress+'"><i style="width:'+challenge.progress+'%"></i></div><div class="season-challenge-foot"><span>'+num(challenge.value)+' / '+num(challenge.target)+' '+esc(challenge.unit)+'</span><b>'+challenge.progress+'%</b></div></article>').join('');
+  const locale=window.AiryUiLocale?.getLocale?.()||'ru',tr=window.AiryUiLocale?.t||((text)=>text),daysLeft=data.season.daysLeft,endDate=new Date(data.season.end+'T12:00:00').toLocaleDateString(uiLocaleTag(),{day:'numeric',month:'long'}),seasonName=tr(data.season.name,locale);
+  note.textContent=locale==='en'?`${seasonName} · through ${endDate} · ${daysLeft?`${daysLeft} days left`:'last day'}. No daily requirements.`:locale==='kk'?`${seasonName} · аяқталуы: ${endDate} · ${daysLeft?`${daysLeft} күн қалды`:'соңғы күн'}. Күн сайын қатысу міндетті емес.`:`${seasonName} · до ${endDate} · ${daysLeft?`осталось ${daysLeft} ${AiryRussianPlural.pluralForm(daysLeft,['день','дня','дней'])}`:'последний день'}. Никаких ежедневных требований.`;
+  $('#seasonChallengeList').innerHTML=data.challenges.map(challenge=>'<article class="season-challenge'+(challenge.done?' is-done':'')+'"><div class="season-challenge-top"><span class="season-challenge-icon" aria-hidden="true">'+(challenge.done?'✓':'✦')+'</span><span class="season-challenge-state">'+tr(challenge.done?'Выполнено':'Испытание сезона',locale)+'</span></div><h3>'+esc(tr(challenge.title,locale))+'</h3><p>'+esc(tr(challenge.description,locale))+'</p><div class="season-challenge-progress" role="progressbar" aria-label="'+esc(tr(challenge.title,locale))+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+challenge.progress+'"><i style="width:'+challenge.progress+'%"></i></div><div class="season-challenge-foot"><span>'+num(challenge.value)+' / '+num(challenge.target)+' '+esc(tr(challenge.unit,locale))+'</span><b>'+challenge.progress+'%</b></div></article>').join('');
 }
 /* ---------- tabs ---------- */
 function show(tab,silent){
@@ -752,7 +758,7 @@ function setExpr(e){
   if(image.complete){if(image.naturalWidth)commit(image);else fallback();}
   else{image.addEventListener('load',()=>commit(image),{once:true});image.addEventListener('error',fallback,{once:true});}
 }
-function inferMikaExpression(text){const value=String(text||'').toLocaleLowerCase('ru-RU');if(/злюсь|разозли|сердит|хватит!|прекрати|бесишь|как ты смеешь/.test(value))return'angry';if(/снова ты за своё|опять ты со своими|ну конечно,? ты|закатываю глаза|не задирай нос|подкол|поддразн/.test(value))return'tease';if(/я же говорила|видишь,? я|как я и сказала|так и знала|горжусь|не зря я в тебя верила/.test(value))return'proud';if(/ничего себе|неожидан|правда\?|серьёзно\?|вот это поворот|вот это да/.test(value))return'surprised';if(/смуща|краснею|не смотри так|д-дурак|засмуща/.test(value))return'embarrassed';if(/груст|печал|хочется плакать|слёз|слез/.test(value))return'sad';if(/тревож|волнуюсь|боюсь|страшно|переживаю/.test(value))return'worried';if(/нежно|побереги себя|я рядом|береги себя|ты устал|тебе тяжело/.test(value))return'tender';if(/застесня|стесня|робко/.test(value))return'shy';if(/секрет|между нами|шалост|заговор/.test(value))return'mischievous';if(/я устала|сама устала|хочу спать|сонн|зеваю|зевнула/.test(value))return'sleepy';if(/не могу усидеть|вперёд!|вперед!|урааа|азарт|так захватывающе|хочу скорее начать/.test(value))return'excited';if(/ура|поздравля|молодец|круто|отлично|здорово|получилось|рада за тебя/.test(value))return'happy';if(/безум|невероятно|гениальн|!!!/.test(value))return'crazy';if(/хм|думаю|кажется|возможно|не уверен|разбер|интересно/.test(value))return'think';if(/ладно|спокойно|пожалуй|ну что ж/.test(value))return'cool';return null;}
+function inferMikaExpression(text){const value=String(text||'').toLocaleLowerCase(uiLocaleTag());if(/злюсь|разозли|сердит|хватит!|прекрати|бесишь|как ты смеешь/.test(value))return'angry';if(/снова ты за своё|опять ты со своими|ну конечно,? ты|закатываю глаза|не задирай нос|подкол|поддразн/.test(value))return'tease';if(/я же говорила|видишь,? я|как я и сказала|так и знала|горжусь|не зря я в тебя верила/.test(value))return'proud';if(/ничего себе|неожидан|правда\?|серьёзно\?|вот это поворот|вот это да/.test(value))return'surprised';if(/смуща|краснею|не смотри так|д-дурак|засмуща/.test(value))return'embarrassed';if(/груст|печал|хочется плакать|слёз|слез/.test(value))return'sad';if(/тревож|волнуюсь|боюсь|страшно|переживаю/.test(value))return'worried';if(/нежно|побереги себя|я рядом|береги себя|ты устал|тебе тяжело/.test(value))return'tender';if(/застесня|стесня|робко/.test(value))return'shy';if(/секрет|между нами|шалост|заговор/.test(value))return'mischievous';if(/я устала|сама устала|хочу спать|сонн|зеваю|зевнула/.test(value))return'sleepy';if(/не могу усидеть|вперёд!|вперед!|урааа|азарт|так захватывающе|хочу скорее начать/.test(value))return'excited';if(/ура|поздравля|молодец|круто|отлично|здорово|получилось|рада за тебя/.test(value))return'happy';if(/безум|невероятно|гениальн|!!!/.test(value))return'crazy';if(/хм|думаю|кажется|возможно|не уверен|разбер|интересно/.test(value))return'think';if(/ладно|спокойно|пожалуй|ну что ж/.test(value))return'cool';return null;}
 function measure(){
   requestAnimationFrame(()=>{const st=$('#stage');if(!st)return;
     st.style.setProperty('--ui-h',$('#ui').offsetHeight+'px');st.style.setProperty('--stage-h',st.offsetHeight+'px');});
@@ -831,10 +837,10 @@ function activateMikaScope(scope){const next=scope||'guest';if(next===mikaHistor
 function mikaContext(){
   const top=TREE.slice().sort((a,b)=>(S.bxp[b.id]||0)-(S.bxp[a.id]||0))[0];
   const hour=new Date().getHours(),dayPart=hour<5||hour>=23?'поздняя ночь':hour<11?'утро':hour<17?'день':'вечер';
-  return {name:(store.profile&&store.profile.name)||'',localTime:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}),dayPart,mood:curExpr,background:document.body.dataset.themeMode||'night',diaryEntries:S.count,streakDays:S.streak,practiceHours:Math.round(S.minutes/60*10)/10,focusSkill:top&&S.bxp[top.id]>0?top.name:''};
+  return {name:(store.profile&&store.profile.name)||'',localTime:new Date().toLocaleTimeString(uiLocaleTag(),{hour:'2-digit',minute:'2-digit'}),dayPart,mood:curExpr,background:document.body.dataset.themeMode||'night',diaryEntries:S.count,streakDays:S.streak,practiceHours:Math.round(S.minutes/60*10)/10,focusSkill:top&&S.bxp[top.id]>0?top.name:''};
 }
 function detectThemeIntent(text){
-  const value=String(text||'').toLocaleLowerCase('ru-RU');
+  const value=String(text||'').toLocaleLowerCase(uiLocaleTag());
   if(/\bне\s+(?:надо\s+)?(?:включай|переключай|меняй|меня|делай|ставь)\b/.test(value))return'';
   const command=/(?:включи|переключи|поменяй|смени|сделай|поставь|установи|хочу|давай|можно)/.test(value);
   if(!command)return'';
@@ -1079,7 +1085,7 @@ function afterLines(en,b,a,serverAwards=null){
   const sk=SK[en.skill];
   const lines=[{expr:'happy',text:'Записано: «'+sk.name+'», '+en.min+' мин. Получено '+en.xp+' XP'+(en.bonus?' (из них '+en.bonus+' за серию)':'')+'.'}];
   TREE.forEach(br=>{
-    if(a.bl[br.id]&&b.bl[br.id]&&a.bl[br.id].L>b.bl[br.id].L)lines.push({expr:'proud',text:'Ветка «'+br.name+'» поднялась до уровня '+a.bl[br.id].L+'.',fx:['LEVEL UP',br.name+' · 레벨 '+a.bl[br.id].L]});
+    if(a.bl[br.id]&&b.bl[br.id]&&a.bl[br.id].L>b.bl[br.id].L)lines.push({expr:'proud',text:'Ветка «'+br.name+'» поднялась до уровня '+a.bl[br.id].L+'.',fx:['LEVEL UP',br.name+' · '+(window.AiryUiLocale?.t?.('Уровень',locale)||'Уровень')+' '+a.bl[br.id].L]});
     br.leaves.forEach(l=>{
       if(a.sl[l.id]&&b.sl[l.id]&&a.sl[l.id].L>b.sl[l.id].L)lines.push({expr:'happy',text:'Навык «'+l.name+'» теперь на уровне '+a.sl[l.id].L+'.'});
       if(a.unlocked.has(l.id)&&!b.unlocked.has(l.id))lines.push({expr:'surprised',text:'В древе открылся новый навык: «'+l.name+'».'});
@@ -1219,10 +1225,10 @@ function openSheet(id){
   const recent=store.proofs.filter(p=>p.skill===id||(sk.isBranch&&SK[p.skill]&&SK[p.skill].branch===id)).slice(0,4);
   let h='<h2 id="skTitle" style="color:'+esc(sk.c)+'">'+esc(sk.name)+'</h2>';
   if(un){
-    h+='<p class="sub"><span class="kr" lang="ko">레벨</span> '+info.L+(info.L>=10?' (максимум)':' · '+num(info.xp-info.lo)+' / '+num(info.hi-info.lo)+' XP до следующего')+'</p>';
+    h+='<p class="sub"><span class="kr">Уровень</span> '+info.L+(info.L>=10?' (максимум)':' · '+num(info.xp-info.lo)+' / '+num(info.hi-info.lo)+' XP до следующего')+'</p>';
     h+='<div class="bar" style="margin:12px 0"><i style="width:'+Math.round(info.frac*100)+'%;background:'+esc(sk.c)+'"></i></div>';
     if(!sk.isBranch&&sk.custom){h+='<div class="skill-spec"><p><b>Цель:</b> '+esc(sk.description||'Освоить навык на практике.')+'</p><p><b>Сложность:</b> '+sk.difficulty+'/5 · <b>Время:</b> около '+sk.minutes+' мин · <b>Награда:</b> '+sk.xp+' XP · <b>Тип:</b> '+esc(({normal:'Навык',important:'Ключевой узел',challenge:'Испытание',boss:'Boss Challenge'})[sk.kind]||'Навык')+'</p>'+(sk.success?'<p><b>Критерий готовности:</b> '+esc(sk.success)+'</p>':'')+(sk.quest?'<p><b>Практика:</b> '+esc(sk.quest)+'</p>':'')+(sk.materials.length?'<p><b>Материалы:</b> '+sk.materials.map(esc).join(' · ')+'</p>':'')+(sk.prerequisites.length?'<p><b>Предварительно:</b> '+sk.prerequisites.map(id=>esc(SK[id]?.name||id)).join(' · ')+'</p>':'')+'</div>';}
-    h+=recent.length?'<label>Последние записи</label>'+recent.map(p=>'<p class="note" style="margin:6px 0">'+esc(new Date(p.ts).toLocaleDateString('ru-RU',{day:'numeric',month:'short'}))+': '+esc(p.text.length>90?p.text.slice(0,90)+'…':p.text)+'</p>').join(''):'<p class="note">Записей по этому навыку пока нет.</p>';
+    h+=recent.length?'<label>Последние записи</label>'+recent.map(p=>'<p class="note" style="margin:6px 0">'+esc(new Date(p.ts).toLocaleDateString(uiLocaleTag(),{day:'numeric',month:'short'}))+': '+esc(p.text.length>90?p.text.slice(0,90)+'…':p.text)+'</p>').join(''):'<p class="note">Записей по этому навыку пока нет.</p>';
   }else{
     const br=SK[sk.branch];
     const prereqs=Array.isArray(sk.prerequisites)?sk.prerequisites.filter(id=>(S.xpBy[id]||0)<=0):[];
@@ -1271,21 +1277,22 @@ $('#lbOverlay').addEventListener('click',()=>{$('#lbOverlay').hidden=true;});
 
 /* ---------- tree view ---------- */
 function nodeEl(sk,info,locked,isBranch){
+  const tr=window.AiryUiLocale?.t||((text)=>text);
   const b=document.createElement('button');b.type='button';const isFavorite=Array.isArray(store.profile?.favoriteSkills)&&store.profile.favoriteSkills.includes(sk.id);b.className='node '+(isBranch?'branch':'leaf')+(locked?' locked':'')+(isFavorite?' is-favorite':'');b.dataset.id=sk.id;
-  const xpTxt=locked?('нужен уровень ветки '+sk.req):(num(info.xp)+' XP');
-  b.innerHTML='<span class="n-top"><span class="n-name">'+esc(sk.name)+'</span><span class="n-lvl">'+(locked?'закрыто':'Lv '+info.L)+'</span></span><span class="n-bar"><i style="width:'+(locked?0:Math.round(info.frac*100))+'%"></i></span><span class="n-xp">'+esc(xpTxt)+'</span>';
-  b.setAttribute('aria-label',sk.name+(locked?', закрыто':', уровень '+info.L)+(isFavorite?', в избранном':''));
+  const name=tr(sk.name),lockedLabel=tr('закрыто'),levelLabel=tr('Уровень'),xpTxt=locked?tr('нужен уровень ветки')+' '+num(sk.req):(num(info.xp)+' XP');
+  b.innerHTML='<span class="n-top"><span class="n-name">'+esc(name)+'</span><span class="n-lvl">'+(locked?lockedLabel:levelLabel+' '+info.L)+'</span></span><span class="n-bar"><i style="width:'+(locked?0:Math.round(info.frac*100))+'%"></i></span><span class="n-xp">'+esc(xpTxt)+'</span>';
+  b.setAttribute('aria-label',name+(locked?', '+lockedLabel:', '+levelLabel+' '+info.L)+(isFavorite?', '+tr('в избранном'):''));
   return b;
 }
 function updateTreeFilter(){
-  const query=$('#treeSearch').value.trim().toLocaleLowerCase('ru-RU');
+  const query=$('#treeSearch').value.trim().toLocaleLowerCase(uiLocaleTag());
   const groups=$$('.grp',$('#tree')),favorites=new Set(Array.isArray(store.profile?.favoriteSkills)?store.profile.favoriteSkills:[]);let count=0,favoriteCount=0;
   groups.forEach(g=>{
     const branch=g.querySelector('.node.branch'),leaves=$$('.node.leaf',g);
-    const branchFav=favorites.has(branch.dataset.id),branchMatch=!!query&&branch.textContent.toLocaleLowerCase('ru-RU').includes(query);
+    const branchFav=favorites.has(branch.dataset.id),branchMatch=!!query&&branch.textContent.toLocaleLowerCase(uiLocaleTag()).includes(query);
     let leafMatches=0;
     leaves.forEach(leaf=>{
-      const matches=(!treeFavoritesOnly||favorites.has(leaf.dataset.id))&&(!query||branchMatch||leaf.textContent.toLocaleLowerCase('ru-RU').includes(query));
+      const matches=(!treeFavoritesOnly||favorites.has(leaf.dataset.id))&&(!query||branchMatch||leaf.textContent.toLocaleLowerCase(uiLocaleTag()).includes(query));
       leaf.hidden=!matches;if(matches){leafMatches++;if(favorites.has(leaf.dataset.id))favoriteCount++;}
     });
     branch.hidden=(treeFavoritesOnly&&!branchFav)&&(!leafMatches||!!query&&!branchMatch);
@@ -1297,7 +1304,8 @@ function updateTreeFilter(){
   $('#tree').hidden=(!!query||treeFavoritesOnly)&&!count;
   $('#treeSearchClear').hidden=!query;
   const toggle=$('#treeFavoritesToggle');toggle.setAttribute('aria-pressed',String(treeFavoritesOnly));toggle.textContent=(treeFavoritesOnly?'★':'☆')+' Избранное';toggle.classList.toggle('is-active',treeFavoritesOnly);
-  $('#treeSearchStatus').textContent=treeFavoritesOnly?(count?('Избранных навыков: '+favoriteCount):'Добавь навыки в избранное через их карточку'):query?(count?('Найдено навыков: '+count):'Совпадений нет'):('Навыков в древе: '+count);
+  const tr=window.AiryUiLocale?.t||((text)=>text);
+  $('#treeSearchStatus').textContent=treeFavoritesOnly?(count?tr(`Избранных навыков: ${favoriteCount}`):tr('Добавь навыки в избранное через их карточку')):query?(count?tr(`Найдено навыков: ${count}`):tr('Совпадений нет')):tr(`Навыков в древе: ${count}`);
   $('#treeEmpty').hidden=count>0;
   scheduleDrawEdges();
 }
@@ -1305,57 +1313,24 @@ $('#treeFavoritesToggle').addEventListener('click',()=>{treeFavoritesOnly=!treeF
 $('#treeSearch').addEventListener('input',updateTreeFilter);
 $('#treeSearch').addEventListener('keydown',e=>{if(e.key==='Escape'&&e.currentTarget.value){e.preventDefault();e.currentTarget.value='';updateTreeFilter();}});
 $('#treeSearchClear').addEventListener('click',()=>{$('#treeSearch').value='';updateTreeFilter();$('#treeSearch').focus();});
-const treeCamera={scale:1,x:0,y:0,pan:false,dragging:false,startX:0,startY:0,originX:0,originY:0};
+const treeCamera={scale:1};
 let treeGroupObserver=null;
-function clampTreeCamera(){
-  const viewport=$('#treeViewport'),tree=$('#tree');if(!viewport||!tree)return;
-  const vw=viewport.clientWidth,vh=viewport.clientHeight,cw=tree.offsetWidth*treeCamera.scale,ch=tree.offsetHeight*treeCamera.scale;
-  if(!vw||!vh||!tree.offsetWidth||!tree.offsetHeight)return;
-  treeCamera.x=cw<=vw?(vw-cw)/2:Math.max(vw-cw,Math.min(0,treeCamera.x));
-  treeCamera.y=ch<=vh?(vh-ch)/2:Math.max(vh-ch,Math.min(0,treeCamera.y));
-}
 function applyTreeCamera(){
-  clampTreeCamera();
-  $('#treeCamera').style.transform='translate3d('+treeCamera.x+'px,'+treeCamera.y+'px,0) scale('+treeCamera.scale+')';
+  $('#treeCamera').style.zoom=String(treeCamera.scale);
   $('#treeZoomLabel').textContent=Math.round(treeCamera.scale*100)+'%';
-  $('#treePanToggle').setAttribute('aria-pressed',String(treeCamera.pan));
-  $('#treePanToggle').textContent=treeCamera.pan?'Перемещение включено':'Переместить карту';
-  $('#treeViewport').classList.toggle('is-pan-mode',treeCamera.pan);
+  scheduleDrawEdges();
 }
-function setTreeZoom(scale,anchorX,anchorY){
-  const viewport=$('#treeViewport'),next=Math.max(.65,Math.min(2.2,scale)),rect=viewport.getBoundingClientRect();
-  const ax=Number.isFinite(anchorX)?anchorX:rect.width/2,ay=Number.isFinite(anchorY)?anchorY:rect.height/2;
-  const worldX=(ax-treeCamera.x)/treeCamera.scale,worldY=(ay-treeCamera.y)/treeCamera.scale;
-  treeCamera.scale=next;treeCamera.x=ax-worldX*next;treeCamera.y=ay-worldY*next;applyTreeCamera();
+function setTreeZoom(scale){
+  treeCamera.scale=Math.max(.65,Math.min(2.2,scale));applyTreeCamera();
 }
 $('#treeZoomOut').addEventListener('click',()=>setTreeZoom(treeCamera.scale-.15));
 $('#treeZoomIn').addEventListener('click',()=>setTreeZoom(treeCamera.scale+.15));
-$('#treeZoomReset').addEventListener('click',()=>{treeCamera.scale=1;treeCamera.x=0;treeCamera.y=0;applyTreeCamera();});
-$('#treePanToggle').addEventListener('click',()=>{treeCamera.pan=!treeCamera.pan;applyTreeCamera();});
-const treeViewport=$('#treeViewport');
-treeViewport.addEventListener('pointerdown',event=>{
-  if(!treeCamera.pan||event.button!==0||event.target.closest('button,input,select,textarea,a'))return;
-  treeCamera.dragging=true;treeCamera.startX=event.clientX;treeCamera.startY=event.clientY;treeCamera.originX=treeCamera.x;treeCamera.originY=treeCamera.y;
-  treeViewport.classList.add('is-dragging');treeViewport.setPointerCapture(event.pointerId);
-});
-treeViewport.addEventListener('pointermove',event=>{
-  if(!treeCamera.dragging)return;
-  treeCamera.x=treeCamera.originX+event.clientX-treeCamera.startX;treeCamera.y=treeCamera.originY+event.clientY-treeCamera.startY;applyTreeCamera();
-});
-function endTreePan(event){if(!treeCamera.dragging)return;treeCamera.dragging=false;treeViewport.classList.remove('is-dragging');if(treeViewport.hasPointerCapture(event.pointerId))treeViewport.releasePointerCapture(event.pointerId);applyTreeCamera();}
-treeViewport.addEventListener('pointerup',endTreePan);treeViewport.addEventListener('pointercancel',endTreePan);
-treeViewport.addEventListener('keydown',event=>{
-  const step=48;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-','Home'].includes(event.key))event.preventDefault();
-  if(event.key==='ArrowLeft')treeCamera.x+=step;else if(event.key==='ArrowRight')treeCamera.x-=step;else if(event.key==='ArrowUp')treeCamera.y+=step;else if(event.key==='ArrowDown')treeCamera.y-=step;
-  else if(event.key==='+'||event.key==='='){setTreeZoom(treeCamera.scale+.15);return;}else if(event.key==='-'){setTreeZoom(treeCamera.scale-.15);return;}else if(event.key==='Home'){treeCamera.scale=1;treeCamera.x=0;treeCamera.y=0;}
-  else return;applyTreeCamera();
-});
-treeViewport.addEventListener('wheel',event=>{if(!(event.ctrlKey||event.metaKey))return;event.preventDefault();const rect=treeViewport.getBoundingClientRect();setTreeZoom(treeCamera.scale+(event.deltaY<0?.08:-.08),event.clientX-rect.left,event.clientY-rect.top);},{passive:false});
+$('#treeZoomReset').addEventListener('click',()=>{treeCamera.scale=1;applyTreeCamera();});
 function renderTree(){
   const root=$('#tree');root.innerHTML='';
   if(treeGroupObserver){treeGroupObserver.disconnect();treeGroupObserver=null;}
   const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','edges');svg.id='edges';svg.setAttribute('aria-hidden','true');root.appendChild(svg);
-  const rn=document.createElement('div');rn.className='root-node';rn.id='rootNode';rn.innerHTML='<b>'+S.tl.L+'</b><span class="kr" lang="ko">레벨</span>';root.appendChild(rn);
+  const rn=document.createElement('div');rn.className='root-node';rn.id='rootNode';rn.innerHTML='<b>'+S.tl.L+'</b><span class="kr">Уровень</span>';root.appendChild(rn);
   const gs=document.createElement('div');gs.className='groups';
   TREE.forEach(br=>{
     const g=document.createElement('div');g.className='grp';g.style.setProperty('--c',br.c);g.dataset.b=br.id;
@@ -1429,7 +1404,7 @@ function drawEdges(generation=edgeDrawGeneration){
   }
   drawBatch();
 }
-if(window.ResizeObserver){const treeObserver=new ResizeObserver(()=>{clampTreeCamera();scheduleDrawEdges();});treeObserver.observe($('#view-tree'));treeObserver.observe($('#treeViewport'));treeObserver.observe($('#tree'));}
+if(window.ResizeObserver){const treeObserver=new ResizeObserver(()=>scheduleDrawEdges());treeObserver.observe($('#view-tree'));treeObserver.observe($('#treeViewport'));treeObserver.observe($('#tree'));}
 window.addEventListener('resize',()=>{scheduleDrawEdges();measure();syncNavIndicator(activeTab);});
 $('#tree').addEventListener('click',e=>{const n=e.target.closest('.node');if(n)openSheet(n.dataset.id);});
 $('#newAdd').addEventListener('click',async()=>{
@@ -1452,28 +1427,30 @@ $('#newAdd').addEventListener('click',async()=>{
 /* ---------- journal ---------- */
 function renderTaskCalendar(){
   const grid=$('#taskCalendarGrid'),agenda=$('#taskCalendarAgenda');if(!grid||!agenda)return;
+  const locale=window.AiryUiLocale?.getLocale?.()||'ru',tr=window.AiryUiLocale?.t||((text)=>text),taskCount=count=>countLabel(count,['задача','задачи','задач'],['task','tasks'],'тапсырма');
   const quests=Array.isArray(store.profile?.quests)?store.profile.quests:[],keyFor=q=>{
     const due=Number(q.dueAt);if(q.period==='personal')return Number.isFinite(due)&&due>0?dayKey(due):'';
     const expiry=Number(q.expiresAt);return Number.isFinite(expiry)&&expiry>0?dayKey(expiry-(q.period==='daily'?1:0)):'';
   };
   const dated=quests.map(q=>({q,key:keyFor(q)})).filter(row=>row.key),monthStart=new Date(taskCalendarMonth.getFullYear(),taskCalendarMonth.getMonth(),1),monthEnd=new Date(taskCalendarMonth.getFullYear(),taskCalendarMonth.getMonth()+1,0),offset=(monthStart.getDay()+6)%7,start=new Date(monthStart);start.setDate(1-offset);
-  $('#taskCalendarMonth').textContent=taskCalendarMonth.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
-  const weekdays=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];let html=weekdays.map(day=>'<span class="task-calendar-weekday" role="columnheader">'+day+'</span>').join('');
+  $('#taskCalendarMonth').textContent=taskCalendarMonth.toLocaleDateString(uiLocaleTag(),{month:'long',year:'numeric'});
+  const weekdays=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];let html=weekdays.map(day=>'<span class="task-calendar-weekday" role="columnheader">'+tr(day,locale)+'</span>').join('');
   const today=dayKey(Date.now());
   for(let index=0;index<42;index++){
     const date=new Date(start);date.setDate(start.getDate()+index);const key=dayKey(date.getTime()),items=dated.filter(row=>row.key===key),outside=date.getMonth()!==taskCalendarMonth.getMonth();
-    html+='<button type="button" role="gridcell" class="task-calendar-day'+(outside?' outside':'')+(key===today?' today':'')+(key===taskCalendarSelected?' selected':'')+(items.length?' has-tasks':'')+'" data-task-day="'+key+'" aria-label="'+esc(date.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})+(items.length?`, ${items.length} ${AiryRussianPlural.pluralForm(items.length,['задача','задачи','задач'])}`:''))+'" aria-pressed="'+(key===taskCalendarSelected)+'"><span>'+date.getDate()+'</span>'+(items.length?'<i>'+Math.min(items.length,9)+(items.length>9?'+':'')+'</i>':'')+'</button>';
+    html+='<button type="button" role="gridcell" class="task-calendar-day'+(outside?' outside':'')+(key===today?' today':'')+(key===taskCalendarSelected?' selected':'')+(items.length?' has-tasks':'')+'" data-task-day="'+key+'" aria-label="'+esc(date.toLocaleDateString(uiLocaleTag(),{day:'numeric',month:'long',year:'numeric'})+(items.length?`, ${taskCount(items.length)}`:''))+'" aria-pressed="'+(key===taskCalendarSelected)+'"><span>'+date.getDate()+'</span>'+(items.length?'<i>'+Math.min(items.length,9)+(items.length>9?'+':'')+'</i>':'')+'</button>';
   }
   grid.innerHTML=html;
   const selected=dated.filter(row=>row.key===taskCalendarSelected),unscheduled=quests.filter(q=>q.period==='personal'&&!q.done&&!keyFor(q));
-  const title=taskCalendarSelected===today?'Сегодня':new Date(taskCalendarSelected+'T12:00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
-  const itemHtml=selected.length?selected.map(({q})=>{const skill=SK[q.skill]||{name:'Навык',c:'#a98acb'},done=q.done===true,period=q.period==='daily'?'Ежедневный':q.period==='weekly'?'Недельный':q.period==='boss'?'Испытание':'Личный';return '<article class="task-agenda-row'+(done?' done':'')+'" style="--c:'+esc(skill.c)+'"><span class="task-agenda-mark" aria-hidden="true">'+(done?'✓':'✦')+'</span><div><b>'+esc(q.title)+'</b><small>'+esc(skill.name)+' · '+period+(done?' · выполнено':'')+'</small></div></article>';}).join(''):'<p class="task-calendar-empty">На этот день задач нет. Выбери дату со значком или открой «Квесты».</p>';
-  agenda.innerHTML='<div class="task-agenda-title"><b>'+esc(title)+'</b><span>'+selected.length+' '+AiryRussianPlural.pluralForm(selected.length,['задача','задачи','задач'])+'</span></div>'+itemHtml+(unscheduled.length?'<p class="task-calendar-unscheduled">Без срока: '+unscheduled.length+' '+AiryRussianPlural.pluralForm(unscheduled.length,['личный квест','личных квеста','личных квестов'])+' · назначь дату в разделе «Квесты».</p>':'');
+  const title=taskCalendarSelected===today?'Сегодня':new Date(taskCalendarSelected+'T12:00:00').toLocaleDateString(uiLocaleTag(),{weekday:'long',day:'numeric',month:'long'});
+  const itemHtml=selected.length?selected.map(({q})=>{const skill=SK[q.skill]||{name:'Навык',c:'#a98acb'},done=q.done===true,period=q.period==='daily'?'Ежедневный':q.period==='weekly'?'Недельный':q.period==='boss'?'Испытание':'Личный';return '<article class="task-agenda-row'+(done?' done':'')+'" style="--c:'+esc(skill.c)+'"><span class="task-agenda-mark" aria-hidden="true">'+(done?'✓':'✦')+'</span><div><b>'+esc(tr(q.title,locale))+'</b><small>'+esc(tr(skill.name,locale))+' · '+tr(period,locale)+(done?' · '+tr('выполнено',locale):'')+'</small></div></article>';}).join(''):'<p class="task-calendar-empty">'+tr('На этот день задач нет. Выбери дату со значком или открой «Квесты».',locale)+'</p>';
+  const unscheduledText=locale==='en'?`No due date: ${taskCount(unscheduled.length)} personal quests · set a date in Quests.`:locale==='kk'?`Мерзімі жоқ: ${taskCount(unscheduled.length)} жеке квест · күнді «Квесттер» бөлімінде белгіле.`:`Без срока: ${taskCount(unscheduled.length)} личный квест · назначь дату в разделе «Квесты».`;
+  agenda.innerHTML='<div class="task-agenda-title"><b>'+esc(tr(title,locale))+'</b><span>'+taskCount(selected.length)+'</span></div>'+itemHtml+(unscheduled.length?'<p class="task-calendar-unscheduled">'+unscheduledText+'</p>':'');
 }
 function renderJournal(){
-  const wordForCount=(count,one,few,many)=>{const n=Math.abs(count)%100,last=n%10;return n>10&&n<20?many:last===1?one:last>=2&&last<=4?few:many;};
+  const wordForCount=(count,one,few,many,enOne,enMany,kk)=>{const locale=window.AiryUiLocale?.getLocale?.()||'ru';if(locale==='en')return Math.abs(Number(count))===1?(enOne||one):(enMany||many);if(locale==='kk')return kk||many;const n=Math.abs(Number(count)||0)%100,last=n%10,index=n>=11&&n<=14?2:last===1?0:last>=2&&last<=4?1:2;return [one,few,many][index];};
   const hrs=Math.round(S.minutes/6)/10;
-  $('#stats').innerHTML=[['Записей',num(S.count)],['Часов практики',String(hrs).replace('.',',')],['Опыта всего',num(S.total)],['Рекорд серии',S.best+' дн.']].map(x=>'<div class="stat"><b>'+esc(x[1])+'</b><span>'+esc(x[0])+'</span></div>').join('');
+  $('#stats').innerHTML=[['Записей',num(S.count)],['Часов практики',new Intl.NumberFormat(uiLocaleTag(),{maximumFractionDigits:1}).format(hrs)],['Опыта всего',num(S.total)],['Рекорд серии',S.best+' дн.']].map(x=>'<div class="stat"><b>'+esc(x[1])+'</b><span>'+esc(x[0])+'</span></div>').join('');
   const today=new Date();today.setHours(12,0,0,0);const todayKey=dayKey(today.getTime()),weekStart=new Date(today);weekStart.setDate(today.getDate()-(today.getDay()+6)%7);const weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
   renderTaskCalendar();
   const fromKey=dayKey(weekStart.getTime()),toKey=dayKey(weekEnd.getTime());
@@ -1482,11 +1459,11 @@ function renderJournal(){
   const weekByDay=new Map();let weekMinutes=0,weekXp=0,weekCount=0;
   if(summary){Object.entries(summary.dayCounts||{}).forEach(([key,count])=>{if(key>=fromKey&&key<=todayKey){const n=Math.max(0,Number(count)||0),xp=Math.max(0,Number(summary.dayXp?.[key])||0);weekByDay.set(key,{n,xp});weekCount+=n;weekXp+=xp;weekMinutes+=Math.max(0,Number(summary.dayMinutes?.[key])||0);}});}
   else weekItems.forEach(p=>{const key=p.day||dayKey(p.ts),d=weekByDay.get(key)||{n:0,xp:0};d.n++;d.xp+=+p.xp||0;weekByDay.set(key,d);weekMinutes+=+p.min||0;weekXp+=+p.xp||0;weekCount++;});
-  const dateLabel=d=>d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'}).replace(/\./g,'');
+  const dateLabel=d=>d.toLocaleDateString(uiLocaleTag(),{day:'numeric',month:'short'}).replace(/\./g,'');
   const weekRange=dateLabel(weekStart)+' — '+dateLabel(weekEnd);
-  $('#journalSubtitle').textContent=S.count?`${num(S.count)} ${wordForCount(S.count,'запись','записи','записей')} · ${String(hrs).replace('.',',')} ч практики за всё время`:'Маленькие шаги, которые уже стали частью твоего пути.';
+  $('#journalSubtitle').textContent=S.count?`${num(S.count)} ${wordForCount(S.count,'запись','записи','записей','entry','entries','жазба')} · ${new Intl.NumberFormat(uiLocaleTag(),{maximumFractionDigits:1}).format(hrs)} ${({ru:'ч практики за всё время',en:'h of practice in total',kk:'сағаттық жаттығу'})[window.AiryUiLocale?.getLocale?.()||'ru']}`:'Маленькие шаги, которые уже стали частью твоего пути.';
   $('#journalWeekTitle').textContent=weekCount?'Неделя · '+weekRange:'Твои шаги складываются в результат';
-  $('#journalWeekNote').textContent=weekCount?`${num(weekByDay.size)} ${wordForCount(weekByDay.size,'день активности','дня активности','дней активности')} · ${num(weekCount)} ${wordForCount(weekCount,'практика','практики','практик')} на этой неделе`:'Отметь занятие, и здесь появится твой недельный ритм.';
+  $('#journalWeekNote').textContent=weekCount?`${num(weekByDay.size)} ${wordForCount(weekByDay.size,'день активности','дня активности','дней активности','active day','active days','белсенді күн')} · ${num(weekCount)} ${wordForCount(weekCount,'практика','практики','практик','practice','practices','жаттығу')} на этой неделе`:'Отметь занятие, и здесь появится твой недельный ритм.';
   $('#journalWeekStats').innerHTML=[['Практики',num(weekCount)],['Минуты',num(weekMinutes)],['Опыт',`+${num(weekXp)} XP`]].map(x=>'<div class="journal-week-stat"><b>'+esc(x[1])+'</b><span>'+esc(x[0])+'</span></div>').join('');
   const compareDays=[7,30,90].includes(Number(journalCompareDays))?Number(journalCompareDays):7,compareStart=addDays(todayKey,1-compareDays),previousStart=addDays(todayKey,1-compareDays*2),previousEnd=addDays(todayKey,-compareDays);
   $('#journalCompareDays').value=String(compareDays);
@@ -1501,7 +1478,7 @@ function renderJournal(){
   const maxBranchXp=Math.max(1,...branchXp.values());
   $('#journalBranchStats').innerHTML='<div class="journal-branch-head"><b>Направления · 30 дней</b><small>Распределение полученного XP</small></div>'+TREE.map(branch=>{const xp=branchXp.get(branch.id)||0;return '<div class="journal-branch-row" title="'+esc(branch.name+': '+num(xp)+' XP за 30 дней')+'"><span>'+esc(branch.name)+'</span><i><b style="width:'+Math.round(xp/maxBranchXp*100)+'%;--branch-color:'+esc(branch.c)+'"></b></i><strong>'+num(xp)+'</strong></div>';}).join('');
   const maxDaily=Math.max(1,...Array.from(weekByDay.values(),d=>d.n));
-  $('#journalWeekChart').innerHTML=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);const key=dayKey(d.getTime()),value=weekByDay.get(key)||{n:0,xp:0},future=d.getTime()>today.getTime(),height=value.n?Math.max(15,Math.round(value.n/maxDaily*100)):4,label=d.toLocaleDateString('ru-RU',{weekday:'short'}).replace(/\./g,'');return '<div class="journal-week-day'+(value.n?' active':'')+(future?' future':'')+'" title="'+esc(`${label}: ${value.n} практик, ${value.xp} XP`)+'"><span class="journal-week-day-count">'+(value.n?num(value.n):'')+'</span><div class="journal-week-track"><i style="height:'+height+'%"></i></div><b>'+esc(label)+'</b></div>';}).join('');
+  $('#journalWeekChart').innerHTML=Array.from({length:7},(_,i)=>{const d=new Date(weekStart);d.setDate(weekStart.getDate()+i);const key=dayKey(d.getTime()),value=weekByDay.get(key)||{n:0,xp:0},future=d.getTime()>today.getTime(),height=value.n?Math.max(15,Math.round(value.n/maxDaily*100)):4,label=d.toLocaleDateString(uiLocaleTag(),{weekday:'short'}).replace(/\./g,'');return '<div class="journal-week-day'+(value.n?' active':'')+(future?' future':'')+'" title="'+esc(`${label}: ${value.n} практик, ${value.xp} XP`)+'"><span class="journal-week-day-count">'+(value.n?num(value.n):'')+'</span><div class="journal-week-track"><i style="height:'+height+'%"></i></div><b>'+esc(label)+'</b></div>';}).join('');
   // heatmap
   const dow=(today.getDay()+6)%7,cols=15;
   const start=new Date(today);start.setDate(today.getDate()-dow-7*(cols-1));
@@ -1513,7 +1490,7 @@ function renderJournal(){
     cells+='<i class="l'+l+(fut?' fut':'')+'" title="'+esc(k+': '+(v?v.n+' зап., '+v.xp+' XP':'нет записей'))+'"></i>';
   }
   $('#heat').innerHTML=cells;
-  const skillSelect=$('#journalSkill'),skills=Object.values(SK).filter(skill=>!skill.isBranch).sort((a,b)=>a.name.localeCompare(b.name,'ru'));
+  const skillSelect=$('#journalSkill'),skills=Object.values(SK).filter(skill=>!skill.isBranch).sort((a,b)=>a.name.localeCompare(b.name,uiLocaleTag()));
   if(jSkillFilter!=='all'&&!SK[jSkillFilter])jSkillFilter='all';
   skillSelect.innerHTML='<option value="all">Все навыки</option>'+skills.map(skill=>'<option value="'+esc(skill.id)+'">'+esc(skill.name)+'</option>').join('');
   skillSelect.value=jSkillFilter;$('#journalFrom').value=jDateFrom;$('#journalTo').value=jDateTo;
@@ -1541,7 +1518,7 @@ function renderJournal(){
   $('#journalMore').disabled=store.historyLoading;
   $('#journalMore').textContent=hasLoadedMore?`Показать ещё ${num(Math.min(JOURNAL_PAGE_SIZE,items.length-jVisibleLimit))} записей`:store.historyLoading?'Загружаю…':'Показать старые записи';
   const activeFilters=(jFilter!=='all'?1:0)+(jSkillFilter!=='all'?1:0)+(jDateFrom?1:0)+(jDateTo?1:0);
-  $('#journalActiveFilterCount').textContent=activeFilters?`${activeFilters} ${wordForCount(activeFilters,'фильтр','фильтра','фильтров')}`:'Все записи';
+  $('#journalActiveFilterCount').textContent=activeFilters?`${activeFilters} ${wordForCount(activeFilters,'фильтр','фильтра','фильтров','filter','filters','сүзгі')}`:'Все записи';
   $('#journalFilterDrawer').classList.toggle('has-filters',activeFilters>0);
   if(!items.length){
     if(!store.proofs.length&&store.mode==='db'&&!store.historyComplete){list.innerHTML='<div class="empty">Загружаю твой дневник…</div>';return;}
@@ -1553,11 +1530,11 @@ function renderJournal(){
   const today2=dayKey(Date.now()),yest=addDays(today2,-1),dayCounts=new Map();items.forEach(p=>{const k=p.day||dayKey(p.ts);dayCounts.set(k,(dayCounts.get(k)||0)+1);});let html='',lastDay='';
   visibleItems.forEach(p=>{
     const entryDay=p.day||dayKey(p.ts);
-    if(entryDay!==lastDay){lastDay=entryDay;const t=entryDay===today2?'Сегодня':entryDay===yest?'Вчера':new Date(p.ts).toLocaleDateString('ru-RU',{weekday:'short',day:'numeric',month:'long'});html+='<div class="day-h"><span>'+esc(t)+'</span><b>'+num(dayCounts.get(entryDay)||0)+' '+wordForCount(dayCounts.get(entryDay)||0,'шаг','шага','шагов')+'</b></div>';}
+    if(entryDay!==lastDay){lastDay=entryDay;const t=entryDay===today2?'Сегодня':entryDay===yest?'Вчера':new Date(p.ts).toLocaleDateString(uiLocaleTag(),{weekday:'short',day:'numeric',month:'long'});html+='<div class="day-h"><span>'+esc(t)+'</span><b>'+num(dayCounts.get(entryDay)||0)+' '+wordForCount(dayCounts.get(entryDay)||0,'шаг','шага','шагов','step','steps','қадам')+'</b></div>';}
     const sk=SK[p.skill]||{name:'Другой навык',c:'#a9a1cf'};
     let link='';if(p.link){let host=p.link;try{host=new URL(p.link).hostname;}catch(e){}link='<a class="e-link" href="'+esc(p.link)+'" target="_blank" rel="noopener noreferrer">'+esc(host)+' ↗</a>';}
     const imgs=(p.imgs&&p.imgs.length)?'<div class="e-imgs">'+p.imgs.map(i=>{const src=i.id?'/_blob/'+i.id:i.d;return '<button type="button" data-src="'+esc(src)+'" aria-label="Открыть фото"><img src="'+esc(src)+'" alt="" loading="lazy"></button>';}).join('')+'</div>':'';
-    html+='<article class="entry" style="--c:'+esc(sk.c)+'" data-id="'+esc(p.id)+'"><div class="e-head"><span class="e-skill">'+esc(sk.name)+'</span><span>'+esc(new Date(p.ts).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}))+'</span><span>'+esc(p.min)+' мин</span><span class="e-xp">+'+esc(p.xp)+' XP</span></div><p>'+esc(p.text)+'</p>'+link+imgs+'<div class="e-act"><button type="button" class="btn small" data-edit="'+esc(p.id)+'">Изменить</button><button type="button" class="btn small danger" data-del="'+esc(p.id)+'">Удалить</button></div></article>';
+    html+='<article class="entry" style="--c:'+esc(sk.c)+'" data-id="'+esc(p.id)+'"><div class="e-head"><span class="e-skill">'+esc(sk.name)+'</span><span>'+esc(new Date(p.ts).toLocaleTimeString(uiLocaleTag(),{hour:'2-digit',minute:'2-digit'}))+'</span><span>'+esc(p.min)+' мин</span><span class="e-xp">+'+esc(p.xp)+' XP</span></div><p>'+esc(p.text)+'</p>'+link+imgs+'<div class="e-act"><button type="button" class="btn small" data-edit="'+esc(p.id)+'">Изменить</button><button type="button" class="btn small danger" data-del="'+esc(p.id)+'">Удалить</button></div></article>';
   });
   list.innerHTML=html;
 }
@@ -1600,38 +1577,41 @@ function awardProgress(awardOrId,s,definitions=allAchievementDefinitions()){
 const AWARD_PAGE_SIZE=36;
 let awardsVisibleLimit=AWARD_PAGE_SIZE;
 function renderNextAwards(s,got,definitions){
+  const locale=window.AiryUiLocale?.getLocale?.()||'ru',tr=window.AiryUiLocale?.t||((text)=>text);
   const goals=definitions.filter(a=>!got.has(a.id)&&!a.secret).map(a=>({award:a,progress:awardProgress(a,s,definitions)})).sort((a,b)=>b.progress.ratio-a.progress.ratio).slice(0,3);
   const root=$('#nextAwards');
   if(!goals.length){root.innerHTML='<p class="next-awards-empty">Все награды собраны. Твоя коллекция полностью расцвела.</p>';return;}
   root.innerHTML='<div class="next-award-list">'+goals.map(({award,progress})=>{
     const pct=Math.round(progress.ratio*100),remaining=Math.max(0,progress.target-progress.value);
-    const progressText=progress.target===1?(progress.value?'Готово':'Нужно выполнить'):`${ACH.formatCount(progress.value,award.unitForms)} / ${ACH.formatCount(progress.target,award.unitForms)}`;
-    const remainingText=progress.target===1?(progress.value?'Почти у цели':'Следующая цель'):`Ещё ${num(remaining)}`;
-    return '<article class="next-award rarity-'+esc(award.rarity.toLowerCase())+'"><div class="next-award-top"><span class="next-award-glyph" aria-hidden="true">'+esc(award.g)+'</span><div class="next-award-copy"><b>'+esc(award.n)+'</b><span>'+esc(award.d)+'</span><small>'+esc(award.rarity)+' · '+esc(award.reward.title)+'</small></div></div><div class="next-award-progress" role="progressbar" aria-label="Прогресс: '+esc(award.n)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><i style="width:'+pct+'%"></i></div><div class="next-award-foot"><span>'+esc(progressText)+'</span><span>'+esc(remainingText)+'</span></div></article>';
+    const progressText=tr(progress.target===1?(progress.value?'Готово':'Нужно выполнить'):`${ACH.formatCount(progress.value,award.unitForms)} / ${ACH.formatCount(progress.target,award.unitForms)}`,locale);
+    const remainingText=tr(progress.target===1?(progress.value?'Почти у цели':'Следующая цель'):`Ещё ${num(remaining)}`,locale);
+    return '<article class="next-award rarity-'+esc(award.rarity.toLowerCase())+'"><div class="next-award-top"><span class="next-award-glyph" aria-hidden="true">'+esc(award.g)+'</span><div class="next-award-copy"><b>'+esc(tr(award.n,locale))+'</b><span>'+esc(tr(award.d,locale))+'</span><small>'+esc(tr(award.rarity,locale))+' · '+esc(tr(award.reward.title,locale))+'</small></div></div><div class="next-award-progress" role="progressbar" aria-label="'+esc(tr('Прогресс: '+award.n,locale))+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><i style="width:'+pct+'%"></i></div><div class="next-award-foot"><span>'+esc(progressText)+'</span><span>'+esc(remainingText)+'</span></div></article>';
   }).join('')+'</div>';
 }
 function renderAwards(){
+  const locale=window.AiryUiLocale?.getLocale?.()||'ru',tr=window.AiryUiLocale?.t||((text)=>text);
   const ledger=(store.profile&&store.profile.achievementUnlocks)||{},got=new Set([...S.ach,...Object.keys(ledger)]);
   const definitions=allAchievementDefinitions();
-  $('#achCount').textContent='Получено '+got.size+' из '+definitions.length;
+  $('#achCount').textContent=tr(`Получено ${got.size} из ${definitions.length}`,locale);
   renderNextAwards(S,got,definitions);
   const visibleAwards=definitions.filter(award=>!award.secret||got.has(award.id));
-  const category=$('#achievementCategory'),previousCategory=category.value||'all',categories=Array.from(new Set(visibleAwards.map(award=>award.category))).sort((a,b)=>a.localeCompare(b,'ru')),selected=previousCategory==='all'||categories.includes(previousCategory)?previousCategory:'all',optionValues=['all',...categories];
-  if(optionValues.length!==category.options.length||optionValues.some((value,index)=>category.options[index]?.value!==value))category.replaceChildren(new Option('Все категории','all'),...categories.map(name=>new Option(name,name)));
-  const query=$('#achievementSearch').value.trim().toLocaleLowerCase('ru-RU'),matches=visibleAwards.filter(award=>(selected==='all'||award.category===selected)&&(!query||(award.n+' '+award.d+' '+award.category+' '+award.rarity+' '+award.reward.title).toLocaleLowerCase('ru-RU').includes(query))),rendered=matches.slice(0,awardsVisibleLimit);
+  const category=$('#achievementCategory'),previousCategory=category.value||'all',categories=Array.from(new Set(visibleAwards.map(award=>award.category))).sort((a,b)=>a.localeCompare(b,uiLocaleTag())),selected=previousCategory==='all'||categories.includes(previousCategory)?previousCategory:'all',optionValues=['all',...categories];
+  if(optionValues.length!==category.options.length||optionValues.some((value,index)=>category.options[index]?.value!==value))category.replaceChildren(new Option(tr('Все категории',locale),'all'),...categories.map(name=>new Option(tr(name,locale),name)));
+  else for(const option of category.options)option.textContent=option.value==='all'?tr('Все категории',locale):tr(option.value,locale);
+  const query=$('#achievementSearch').value.trim().toLocaleLowerCase(uiLocaleTag()),matches=visibleAwards.filter(award=>(selected==='all'||award.category===selected)&&(!query||[award.n,award.d,award.category,award.rarity,award.reward.title].map(value=>tr(value,locale)).join(' ').toLocaleLowerCase(uiLocaleTag()).includes(query))),rendered=matches.slice(0,awardsVisibleLimit);
   category.value=selected;
-  $('#achievementFilterStatus').textContent=query||selected!=='all'||matches.length>rendered.length?`Показано ${rendered.length} из ${matches.length}`:'';
-  $('#badges').innerHTML=matches.length?rendered.map(a=>{const earned=got.has(a.id),progress=awardProgress(a,S,definitions),pct=earned?100:Math.round(progress.ratio*100),date=ledger[a.id]&&ledger[a.id].at?new Date(ledger[a.id].at).toLocaleDateString('ru-RU'):'Ранее получено';return '<div class="badge '+(earned?'on':'')+' rarity-'+esc(a.rarity.toLowerCase())+'" data-achievement="'+esc(a.id)+'"><div class="gl" aria-hidden="true">'+esc(a.g)+'</div><b>'+esc(a.n)+'</b><span>'+esc(a.d)+'</span><small>'+esc(a.rarity)+(earned?' · '+esc(date):' · '+pct+'%')+'</small><div class="badge-progress" role="progressbar" aria-label="Прогресс: '+esc(a.n)+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><i style="width:'+pct+'%"></i></div><em>'+esc(a.reward.title)+'</em></div>';}).join('')+(matches.length>rendered.length?'<button type="button" class="btn small achievements-load-more" id="achievementsLoadMore">Показать ещё '+Math.min(AWARD_PAGE_SIZE,matches.length-rendered.length)+' · осталось '+(matches.length-rendered.length)+'</button>':''):'<p class="achievement-empty">Награды не найдены. Измени поиск или выбери другую категорию.</p>';
+  $('#achievementFilterStatus').textContent=query||selected!=='all'||matches.length>rendered.length?tr(`Показано ${rendered.length} из ${matches.length}`,locale):'';
+  $('#badges').innerHTML=matches.length?rendered.map(a=>{const earned=got.has(a.id),progress=awardProgress(a,S,definitions),pct=earned?100:Math.round(progress.ratio*100),date=ledger[a.id]&&ledger[a.id].at?new Date(ledger[a.id].at).toLocaleDateString(uiLocaleTag()):tr('Ранее получено',locale);return '<div class="badge '+(earned?'on':'')+' rarity-'+esc(a.rarity.toLowerCase())+'" data-achievement="'+esc(a.id)+'"><div class="gl" aria-hidden="true">'+esc(a.g)+'</div><b>'+esc(tr(a.n,locale))+'</b><span>'+esc(tr(a.d,locale))+'</span><small>'+esc(tr(a.rarity,locale))+(earned?' · '+esc(date):' · '+pct+'%')+'</small><div class="badge-progress" role="progressbar" aria-label="'+esc(tr('Прогресс: '+a.n,locale))+'" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><i style="width:'+pct+'%"></i></div><em>'+esc(tr(a.reward.title,locale))+'</em></div>';}).join('')+(matches.length>rendered.length?'<button type="button" class="btn small achievements-load-more" id="achievementsLoadMore">'+esc(tr(`Показать ещё ${Math.min(AWARD_PAGE_SIZE,matches.length-rendered.length)} · осталось ${matches.length-rendered.length}`,locale))+'</button>':''):'<p class="achievement-empty">'+esc(tr('Награды не найдены. Измени поиск или выбери другую категорию.',locale))+'</p>';
 }
 $('#achievementSearch').addEventListener('input',()=>{awardsVisibleLimit=AWARD_PAGE_SIZE;renderAwards();});
 $('#achievementCategory').addEventListener('change',()=>{awardsVisibleLimit=AWARD_PAGE_SIZE;renderAwards();});
 $('#badges').addEventListener('click',event=>{if(!event.target.closest('#achievementsLoadMore'))return;awardsVisibleLimit+=AWARD_PAGE_SIZE;renderAwards();$('#achievementsLoadMore')?.focus();});
 function renderCosmeticInventory(){
   const profile=store.profile||{},items=window.AiryCosmeticInventory.build(allAchievementDefinitions(),profile.achievementUnlocks,profile.unlockedTitles);
-  const query=$('#cosmeticInventorySearch').value.trim().toLocaleLowerCase('ru-RU'),rarity=$('#cosmeticInventoryRarity').value,active=profile.activeTitle||'',matches=items.filter(item=>(rarity==='all'||item.rarity===rarity)&&(!query||(item.title+' '+item.name+' '+item.category+' '+item.rarity).toLocaleLowerCase('ru-RU').includes(query)));
+  const query=$('#cosmeticInventorySearch').value.trim().toLocaleLowerCase(uiLocaleTag()),rarity=$('#cosmeticInventoryRarity').value,active=profile.activeTitle||'',matches=items.filter(item=>(rarity==='all'||item.rarity===rarity)&&(!query||(item.title+' '+item.name+' '+item.category+' '+item.rarity).toLocaleLowerCase(uiLocaleTag()).includes(query)));
   $('#cosmeticInventoryCount').textContent=String(items.length);
   $('#cosmeticInventoryCount').setAttribute('aria-label',`${items.length} предметов в коллекции`);
-  $('#cosmeticInventory').innerHTML=matches.length?matches.map(item=>'<article class="cosmetic-item rarity-'+esc(item.rarity.toLowerCase())+'"><span class="cosmetic-item-glyph" aria-hidden="true">'+esc(item.glyph)+'</span><div class="cosmetic-item-copy"><b>'+esc(item.title)+'</b><span>'+esc(item.name)+'</span><small>'+esc(item.rarity)+(item.at?' · '+esc(new Date(item.at).toLocaleDateString('ru-RU')):'')+'</small></div><button type="button" class="btn small cosmetic-equip" data-equip-title="'+esc(item.title)+'" aria-pressed="'+String(active===item.title)+'">'+(active===item.title?'Выбран':'Надеть')+'</button></article>').join(''):'<p class="achievement-empty">'+(items.length?'По этим фильтрам награды не найдены.':'Пока пусто. Выполняй практику и открывай достижения, чтобы собирать титулы и значки.')+'</p>';
+  $('#cosmeticInventory').innerHTML=matches.length?matches.map(item=>'<article class="cosmetic-item rarity-'+esc(item.rarity.toLowerCase())+'"><span class="cosmetic-item-glyph" aria-hidden="true">'+esc(item.glyph)+'</span><div class="cosmetic-item-copy"><b>'+esc(item.title)+'</b><span>'+esc(item.name)+'</span><small>'+esc(item.rarity)+(item.at?' · '+esc(new Date(item.at).toLocaleDateString(uiLocaleTag())):'')+'</small></div><button type="button" class="btn small cosmetic-equip" data-equip-title="'+esc(item.title)+'" aria-pressed="'+String(active===item.title)+'">'+(active===item.title?'Выбран':'Надеть')+'</button></article>').join(''):'<p class="achievement-empty">'+(items.length?'По этим фильтрам награды не найдены.':'Пока пусто. Выполняй практику и открывай достижения, чтобы собирать титулы и значки.')+'</p>';
   $('#cosmeticInventoryStatus').textContent=items.length?`Собрано ${items.length} косметических наград. Они не меняют расчёт опыта.`:'';
 }
 $('#cosmeticInventorySearch').addEventListener('input',renderCosmeticInventory);
@@ -1646,7 +1626,7 @@ function renderFriends(){
   if(friendsState.loading){status.textContent='Загружаю список друзей…';return;}
   if(friendsState.uid!==user.uid){status.textContent='Нажми «Обновить список», чтобы загрузить друзей.';list.innerHTML='';return;}
   status.textContent=friendsState.items.length?`Взаимных связей: ${friendsState.items.length}${friendsState.truncated?' · показаны первые 50':''}.`:'Пока здесь пусто. Создай код и отправь его другу.';
-  list.innerHTML=friendsState.items.map(friend=>'<article class="friend-row"><span class="friend-avatar" aria-hidden="true">'+esc(friend.avatar)+'</span><div class="friend-copy"><b>'+esc(friend.name)+'</b><small>Вместе с '+esc(friend.since?new Date(friend.since).toLocaleDateString('ru-RU'):'недавнего времени')+'</small></div><button type="button" class="btn small danger" data-remove-friend="'+esc(friend.uid)+'" aria-label="Удалить из друзей: '+esc(friend.name)+'">Убрать</button></article>').join('');
+  list.innerHTML=friendsState.items.map(friend=>'<article class="friend-row"><span class="friend-avatar" aria-hidden="true">'+esc(friend.avatar)+'</span><div class="friend-copy"><b>'+esc(friend.name)+'</b><small>Вместе с '+esc(friend.since?new Date(friend.since).toLocaleDateString(uiLocaleTag()):'недавнего времени')+'</small></div><button type="button" class="btn small danger" data-remove-friend="'+esc(friend.uid)+'" aria-label="Удалить из друзей: '+esc(friend.name)+'">Убрать</button></article>').join('');
 }
 async function loadFriends(force=false){
   const user=store.auth&&store.auth.currentUser;
@@ -1681,7 +1661,7 @@ function presentServerAchievementAwards(awards,{showCelebration=true}={}){
   if(!awards.length)return;
   awards.forEach((award,index)=>{const badge=document.querySelector('.badge[data-achievement="'+award.id+'"]');if(!badge)return;badge.style.setProperty('--earned-delay',Math.min(index,4)*90+'ms');badge.classList.remove('just-earned');void badge.offsetWidth;badge.classList.add('just-earned');setTimeout(()=>{badge.classList.remove('just-earned');badge.style.removeProperty('--earned-delay');},1100+index*90);});
   const first=awards[0];if(showCelebration)fx(awards.length===1?'ДОСТИЖЕНИЕ ОТКРЫТО':`ДОСТИЖЕНИЙ: ${awards.length}`,first.n,'award');
-  if(profilePreferences().achievementNotifications&&('Notification'in window)&&Notification.permission==='granted')awards.slice(0,3).forEach(award=>{try{new Notification('Новое достижение · '+award.n,{body:award.d,icon:'/icons/airy-192.png',tag:'airy-achievement-'+award.id});}catch{}});
+  if(profilePreferences().achievementNotifications&&('Notification'in window)&&Notification.permission==='granted'){const tr=window.AiryUiLocale?.t||((value)=>value);awards.slice(0,3).forEach(award=>{try{new Notification(tr('Новое достижение · '+award.n),{body:tr(award.d),icon:'/icons/airy-192.png',tag:'airy-achievement-'+award.id});}catch{}});}
 }
 $('#friendInviteCreate').addEventListener('click',async event=>{const button=event.currentTarget;button.disabled=true;$('#friendsStatus').textContent='Создаю одноразовый код…';try{const result=await postFriendAction({action:'invite'});$('#friendInviteCodeOut').value=result.code;$('#friendInviteResult').hidden=false;$('#friendsStatus').textContent='Код действует 7 дней и сработает один раз.';}catch(error){$('#friendsStatus').textContent=friendErrorMessage(error.message);}finally{button.disabled=false;}});
 $('#friendInviteCopy').addEventListener('click',async()=>{const input=$('#friendInviteCodeOut');try{await navigator.clipboard.writeText(input.value);$('#friendsStatus').textContent='Код скопирован. Отправь его другу.';}catch{input.focus();input.select();try{document.execCommand('copy');$('#friendsStatus').textContent='Код скопирован. Отправь его другу.';}catch{$('#friendsStatus').textContent='Выдели код и скопируй его вручную.';}}});
@@ -1750,29 +1730,29 @@ function renderSkillArchive(){
   BASE.forEach(branch=>{names[branch.id]=(edits[branch.id]&&edits[branch.id].name)||branch.name;branch.leaves.forEach(skill=>{names[skill.id]=(edits[skill.id]&&edits[skill.id].name)||skill.name;});});
   ((store.profile&&store.profile.customBranches)||[]).forEach(branch=>{names[branch.id]=(edits[branch.id]&&edits[branch.id].name)||branch.name;});
   ((store.profile&&store.profile.customLeaves)||[]).forEach(skill=>{names[skill.id]=(edits[skill.id]&&edits[skill.id].name)||skill.name;});
-  const meta=(store.profile&&store.profile.skillArchiveMeta)||{},query=($('#skillArchiveSearch')?.value||'').trim().toLocaleLowerCase('ru-RU'),from=$('#skillArchiveFrom')?.value||'',to=$('#skillArchiveTo')?.value||'',hidden=Array.from(hiddenIds).filter(id=>names[id]&&!purgedIds.has(id)),root=$('#skillArchive');
-  const filtered=hidden.filter(id=>{const at=Number(meta[id]?.archivedAt||meta[id]),date=Number.isFinite(at)&&at>0?dayKey(at):'';return(!query||names[id].toLocaleLowerCase('ru-RU').includes(query))&&(!from||(date&&date>=from))&&(!to||(date&&date<=to));}).sort((a,b)=>(Number(meta[b]?.archivedAt||meta[b])||0)-(Number(meta[a]?.archivedAt||meta[a])||0)||names[a].localeCompare(names[b],'ru'));
+  const meta=(store.profile&&store.profile.skillArchiveMeta)||{},query=($('#skillArchiveSearch')?.value||'').trim().toLocaleLowerCase(uiLocaleTag()),from=$('#skillArchiveFrom')?.value||'',to=$('#skillArchiveTo')?.value||'',hidden=Array.from(hiddenIds).filter(id=>names[id]&&!purgedIds.has(id)),root=$('#skillArchive');
+  const filtered=hidden.filter(id=>{const at=Number(meta[id]?.archivedAt||meta[id]),date=Number.isFinite(at)&&at>0?dayKey(at):'';return(!query||names[id].toLocaleLowerCase(uiLocaleTag()).includes(query))&&(!from||(date&&date>=from))&&(!to||(date&&date<=to));}).sort((a,b)=>(Number(meta[b]?.archivedAt||meta[b])||0)-(Number(meta[a]?.archivedAt||meta[a])||0)||names[a].localeCompare(names[b],uiLocaleTag()));
   const page=AiryArchivePagination.page(filtered,skillArchiveLimit);
   $('#archiveCount').textContent=String(filtered.length);
-  root.innerHTML=filtered.length?page.visible.map(id=>{const at=Number(meta[id]?.archivedAt||meta[id]),date=Number.isFinite(at)&&at>0?new Date(at).toLocaleDateString('ru-RU'):'Дата не записана';return '<div class="archive-skill-row"><span>'+esc(names[id])+'<small class="archive-skill-date">'+esc(date)+'</small></span><div class="archive-skill-actions"><button type="button" class="btn small" data-restore-skill="'+esc(id)+'">Восстановить</button><button type="button" class="btn small danger" data-delete-archived="'+esc(id)+'">Удалить навсегда</button></div></div>';}).join('')+(page.remaining?'<button type="button" class="btn small archive-load-more" data-more-skill-archive><span>Показать ещё записи</span> · '+num(page.remaining)+'</button>':''):hidden.length?'<p class="archive-empty">По этим фильтрам навыки не найдены.</p>':'<p class="archive-empty">Архив пуст. Удалённые навыки будут храниться здесь.</p>';
+  root.innerHTML=filtered.length?page.visible.map(id=>{const at=Number(meta[id]?.archivedAt||meta[id]),date=Number.isFinite(at)&&at>0?new Date(at).toLocaleDateString(uiLocaleTag()):'Дата не записана';return '<div class="archive-skill-row"><span>'+esc(names[id])+'<small class="archive-skill-date">'+esc(date)+'</small></span><div class="archive-skill-actions"><button type="button" class="btn small" data-restore-skill="'+esc(id)+'">Восстановить</button><button type="button" class="btn small danger" data-delete-archived="'+esc(id)+'">Удалить навсегда</button></div></div>';}).join('')+(page.remaining?'<button type="button" class="btn small archive-load-more" data-more-skill-archive><span>Показать ещё записи</span> · '+num(page.remaining)+'</button>':''):hidden.length?'<p class="archive-empty">По этим фильтрам навыки не найдены.</p>':'<p class="archive-empty">Архив пуст. Удалённые навыки будут храниться здесь.</p>';
 }
 function renderTreeArchive(){
   const root=$('#treeArchive');if(!root)return;
-  const query=($('#treeArchiveSearch')?.value||'').trim().toLocaleLowerCase('ru-RU'),from=$('#treeArchiveFrom')?.value||'',to=$('#treeArchiveTo')?.value||'',allRows=(Array.isArray(store.profile&&store.profile.treeArchive)?store.profile.treeArchive:[]).filter(row=>row&&typeof row.id==='string'&&row.tree&&typeof row.tree==='object').slice().reverse(),rows=allRows.filter(row=>{const tree=row.tree||{},branches=Array.isArray(tree.customBranches)?tree.customBranches:[],leaves=Array.isArray(tree.customLeaves)?tree.customLeaves:[],names=[...branches,...leaves].map(item=>item&&typeof item.name==='string'?item.name:'').join(' '),haystack=('версия древа '+row.id+' '+names).toLocaleLowerCase('ru-RU'),at=Number(row.createdAt),date=Number.isFinite(at)&&at>0&&at<=8640000000000000?dayKey(at):'';return(!query||haystack.includes(query))&&(!from||(date&&date>=from))&&(!to||(date&&date<=to));});
+  const query=($('#treeArchiveSearch')?.value||'').trim().toLocaleLowerCase(uiLocaleTag()),from=$('#treeArchiveFrom')?.value||'',to=$('#treeArchiveTo')?.value||'',allRows=(Array.isArray(store.profile&&store.profile.treeArchive)?store.profile.treeArchive:[]).filter(row=>row&&typeof row.id==='string'&&row.tree&&typeof row.tree==='object').slice().reverse(),rows=allRows.filter(row=>{const tree=row.tree||{},branches=Array.isArray(tree.customBranches)?tree.customBranches:[],leaves=Array.isArray(tree.customLeaves)?tree.customLeaves:[],names=[...branches,...leaves].map(item=>item&&typeof item.name==='string'?item.name:'').join(' '),haystack=('версия древа '+row.id+' '+names).toLocaleLowerCase(uiLocaleTag()),at=Number(row.createdAt),date=Number.isFinite(at)&&at>0&&at<=8640000000000000?dayKey(at):'';return(!query||haystack.includes(query))&&(!from||(date&&date>=from))&&(!to||(date&&date<=to));});
   $('#treeArchiveCount').textContent=String(rows.length);
-  root.innerHTML=rows.length?rows.map(row=>{const tree=row.tree||{},branches=Array.isArray(tree.customBranches)?tree.customBranches.length:0,leaves=Array.isArray(tree.customLeaves)?tree.customLeaves.length:0,hidden=Array.isArray(tree.hiddenSkills)?tree.hiddenSkills.length:0,at=Number(row.createdAt),date=Number.isFinite(at)&&at>0&&at<=8640000000000000?new Date(at).toLocaleString('ru-RU',{dateStyle:'medium',timeStyle:'short'}):'Дата не записана';return '<article class="archive-tree-row"><span class="archive-achievement-glyph" aria-hidden="true">⌘</span><span class="archive-achievement-copy"><b>Версия древа</b><small>'+esc(date)+' · '+branches+' пользовательских ветвей · '+leaves+' навыков · '+hidden+' в архиве</small></span><span class="archive-tree-actions"><button class="btn small" type="button" data-restore-tree="'+esc(row.id)+'">Восстановить</button><button class="btn small danger" type="button" data-delete-tree-snapshot="'+esc(row.id)+'">Удалить</button></span></article>';}).join(''):allRows.length?'<p class="archive-empty">По этим фильтрам версии не найдены.</p>':'<p class="archive-empty">Снимки появятся, когда ты изменишь структуру древа.</p>';
+  root.innerHTML=rows.length?rows.map(row=>{const tree=row.tree||{},branches=Array.isArray(tree.customBranches)?tree.customBranches.length:0,leaves=Array.isArray(tree.customLeaves)?tree.customLeaves.length:0,hidden=Array.isArray(tree.hiddenSkills)?tree.hiddenSkills.length:0,at=Number(row.createdAt),date=Number.isFinite(at)&&at>0&&at<=8640000000000000?new Date(at).toLocaleString(uiLocaleTag(),{dateStyle:'medium',timeStyle:'short'}):'Дата не записана';return '<article class="archive-tree-row"><span class="archive-achievement-glyph" aria-hidden="true">⌘</span><span class="archive-achievement-copy"><b>Версия древа</b><small>'+esc(date)+' · '+branches+' пользовательских ветвей · '+leaves+' навыков · '+hidden+' в архиве</small></span><span class="archive-tree-actions"><button class="btn small" type="button" data-restore-tree="'+esc(row.id)+'">Восстановить</button><button class="btn small danger" type="button" data-delete-tree-snapshot="'+esc(row.id)+'">Удалить</button></span></article>';}).join(''):allRows.length?'<p class="archive-empty">По этим фильтрам версии не найдены.</p>':'<p class="archive-empty">Снимки появятся, когда ты изменишь структуру древа.</p>';
 }
 ['skillArchiveSearch','skillArchiveFrom','skillArchiveTo'].forEach(id=>$('#'+id).addEventListener(id.endsWith('Search')?'input':'change',()=>{skillArchiveLimit=ARCHIVE_PAGE_SIZE;renderSkillArchive();}));
 ['treeArchiveSearch','treeArchiveFrom','treeArchiveTo'].forEach(id=>$('#'+id).addEventListener(id.endsWith('Search')?'input':'change',renderTreeArchive));
 function renderAchievementArchive(){
   const root=$('#achievementArchive');if(!root)return;
-  const ledger=(store.profile&&store.profile.achievementUnlocks)||{},earned=new Set([...S.ach,...Object.keys(ledger)]),query=($('#achievementArchiveSearch').value||'').trim().toLocaleLowerCase('ru-RU'),days=Number($('#achievementArchivePeriod').value)||0,cutoff=days?Date.now()-days*86400000:0;
+  const ledger=(store.profile&&store.profile.achievementUnlocks)||{},earned=new Set([...S.ach,...Object.keys(ledger)]),query=($('#achievementArchiveSearch').value||'').trim().toLocaleLowerCase(uiLocaleTag()),days=Number($('#achievementArchivePeriod').value)||0,cutoff=days?Date.now()-days*86400000:0;
   const rows=allAchievementDefinitions().filter(award=>earned.has(award.id)).map(award=>{const rawAt=Number(ledger[award.id]&&ledger[award.id].at);return{award,at:Number.isFinite(rawAt)&&rawAt>0&&rawAt<=8640000000000000?rawAt:0};}).filter(({award,at})=>{
-    const searchable=[award.n,award.d,award.rarity,award.reward&&award.reward.title].join(' ').toLocaleLowerCase('ru-RU');
+    const searchable=[award.n,award.d,award.rarity,award.reward&&award.reward.title].join(' ').toLocaleLowerCase(uiLocaleTag());
     return(!query||searchable.includes(query))&&(!cutoff||(at&&at>=cutoff));
-  }).sort((a,b)=>b.at-a.at||a.award.n.localeCompare(b.award.n,'ru'));
+  }).sort((a,b)=>b.at-a.at||a.award.n.localeCompare(b.award.n,uiLocaleTag()));
   $('#achievementArchiveCount').textContent=String(rows.length);
-  root.innerHTML=rows.length?rows.map(({award,at})=>'<article class="archive-achievement rarity-'+esc(award.rarity.toLowerCase())+'"><span class="archive-achievement-glyph" aria-hidden="true">'+esc(award.g)+'</span><span class="archive-achievement-copy"><b>'+esc(award.n)+'</b><small>'+esc(award.d)+'</small></span><span class="archive-achievement-meta"><b>'+esc(award.rarity)+'</b><small>'+esc(award.reward.title)+'</small><time'+(at?' datetime="'+new Date(at).toISOString()+'"':'')+'>'+(at?esc(new Date(at).toLocaleDateString('ru-RU')):'Дата не записана')+'</time></span></article>').join(''):'<p class="archive-empty">'+(query||days?'Наград за выбранный период не найдено.':'Пока нет открытых достижений.')+'</p>';
+  root.innerHTML=rows.length?rows.map(({award,at})=>'<article class="archive-achievement rarity-'+esc(award.rarity.toLowerCase())+'"><span class="archive-achievement-glyph" aria-hidden="true">'+esc(award.g)+'</span><span class="archive-achievement-copy"><b>'+esc(award.n)+'</b><small>'+esc(award.d)+'</small></span><span class="archive-achievement-meta"><b>'+esc(award.rarity)+'</b><small>'+esc(award.reward.title)+'</small><time'+(at?' datetime="'+new Date(at).toISOString()+'"':'')+'>'+(at?esc(new Date(at).toLocaleDateString(uiLocaleTag())):'Дата не записана')+'</time></span></article>').join(''):'<p class="archive-empty">'+(query||days?'Наград за выбранный период не найдено.':'Пока нет открытых достижений.')+'</p>';
 }
 $('#achievementArchiveSearch').addEventListener('input',renderAchievementArchive);
 $('#achievementArchivePeriod').addEventListener('change',renderAchievementArchive);
@@ -1781,11 +1761,11 @@ function renderQuestArchive(){
   const profile=store.profile||{},history=Array.isArray(profile.questHistory)?profile.questHistory:[],legacyQuests=Array.isArray(profile.quests)?profile.quests:[],entries=new Map();
   history.forEach(item=>{const at=Number(item&&item.completedAt);if(!item||typeof item.id!=='string'||typeof item.skill!=='string'||!Number.isFinite(at)||at<=0||at>8640000000000000)return;entries.set(item.id,{id:item.id,title:typeof item.title==='string'?item.title:'Завершённый квест',skill:item.skill,period:item.period,completedAt:at,requiredMinutes:item.requiredMinutes,requiresEvidence:item.requiresEvidence===true});});
   store.proofs.forEach(proof=>{if(typeof proof.quest!=='string'||!proof.quest||entries.has(proof.quest))return;const quest=legacyQuests.find(item=>item&&item.id===proof.quest),at=Number(proof.ts);entries.set(proof.quest,{id:proof.quest,title:quest&&typeof quest.title==='string'?quest.title:'Завершённый квест',skill:typeof proof.skill==='string'?proof.skill:'',period:quest&&quest.period||'personal',completedAt:Number.isFinite(at)&&at>0&&at<=8640000000000000?at:0,requiredMinutes:quest&&quest.requiredMinutes,requiresEvidence:quest&&quest.requiresEvidence===true});});
-  const hidden=new Set(Array.isArray(profile.hiddenQuestArchiveIds)?profile.hiddenQuestArchiveIds.filter(id=>typeof id==='string'):[]),purged=new Set(Array.isArray(profile.purgedQuestArchiveIds)?profile.purgedQuestArchiveIds.filter(id=>typeof id==='string'):[]),query=$('#questArchiveSearch').value.trim().toLocaleLowerCase('ru-RU'),days=Number($('#questArchivePeriod').value)||0,cutoff=days?Date.now()-days*86400000:0;
-  const rows=Array.from(entries.values()).filter(item=>{if(purged.has(item.id))return false;const skillName=SK[item.skill]?.name||item.skill,haystack=(item.title+' '+skillName).toLocaleLowerCase('ru-RU');return(!query||haystack.includes(query))&&(!cutoff||(item.completedAt&&item.completedAt>=cutoff));}).sort((a,b)=>b.completedAt-a.completedAt||a.title.localeCompare(b.title,'ru'));
+  const hidden=new Set(Array.isArray(profile.hiddenQuestArchiveIds)?profile.hiddenQuestArchiveIds.filter(id=>typeof id==='string'):[]),purged=new Set(Array.isArray(profile.purgedQuestArchiveIds)?profile.purgedQuestArchiveIds.filter(id=>typeof id==='string'):[]),query=$('#questArchiveSearch').value.trim().toLocaleLowerCase(uiLocaleTag()),days=Number($('#questArchivePeriod').value)||0,cutoff=days?Date.now()-days*86400000:0;
+  const rows=Array.from(entries.values()).filter(item=>{if(purged.has(item.id))return false;const skillName=SK[item.skill]?.name||item.skill,haystack=(item.title+' '+skillName).toLocaleLowerCase(uiLocaleTag());return(!query||haystack.includes(query))&&(!cutoff||(item.completedAt&&item.completedAt>=cutoff));}).sort((a,b)=>b.completedAt-a.completedAt||a.title.localeCompare(b.title,uiLocaleTag()));
   const page=AiryArchivePagination.page(rows,questArchiveLimit);
   const visible=rows.filter(item=>!hidden.has(item.id));$('#questArchiveCount').textContent=String(visible.length);
-  root.innerHTML=rows.length?page.visible.map(item=>{const isHidden=hidden.has(item.id),skill=SK[item.skill]?.name||'Навык из истории',date=item.completedAt?new Date(item.completedAt).toLocaleDateString('ru-RU'):'Дата не записана',requirements=[Number(item.requiredMinutes)>0?'от '+Math.max(15,Math.min(600,Number(item.requiredMinutes)))+' мин':'',item.requiresEvidence?'нужно подтверждение':''].filter(Boolean).join(' · ');return '<article class="archive-quest-row'+(isHidden?' is-hidden':'')+'"><span class="archive-achievement-glyph" aria-hidden="true">'+(isHidden?'◌':'✓')+'</span><span class="archive-achievement-copy"><b>'+esc(item.title)+'</b><small>'+esc(skill)+' · '+esc(({daily:'Ежедневный',weekly:'Недельный',boss:'Boss Challenge',personal:'Личный'})[item.period]||'Квест')+' · '+esc(date)+(requirements?' · '+esc(requirements):'')+'</small></span><span class="archive-quest-actions">'+(isHidden?'<button class="btn small" type="button" data-restore-quest-archive="'+esc(item.id)+'">Восстановить</button>':'<button class="btn small" type="button" data-repeat-quest="'+esc(item.id)+'"'+(SK[item.skill]?'':' disabled')+'>Повторить</button><button class="btn small" type="button" data-hide-quest-archive="'+esc(item.id)+'">Скрыть</button>')+'<button class="btn small danger" type="button" data-delete-quest-archive="'+esc(item.id)+'">Удалить навсегда</button></span></article>';}).join('')+(page.remaining?'<button type="button" class="btn small archive-load-more" data-more-quest-archive><span>Показать ещё записи</span> · '+num(page.remaining)+'</button>':''):(store.mode==='db'&&!store.historyComplete?'<p class="archive-empty">Загружаю историю заданий…</p>':'<p class="archive-empty">Завершённых квестов пока нет. Пройденные задания появятся здесь.</p>');
+  root.innerHTML=rows.length?page.visible.map(item=>{const isHidden=hidden.has(item.id),skill=SK[item.skill]?.name||'Навык из истории',date=item.completedAt?new Date(item.completedAt).toLocaleDateString(uiLocaleTag()):'Дата не записана',requirements=[Number(item.requiredMinutes)>0?'от '+Math.max(15,Math.min(600,Number(item.requiredMinutes)))+' мин':'',item.requiresEvidence?'нужно подтверждение':''].filter(Boolean).join(' · ');return '<article class="archive-quest-row'+(isHidden?' is-hidden':'')+'"><span class="archive-achievement-glyph" aria-hidden="true">'+(isHidden?'◌':'✓')+'</span><span class="archive-achievement-copy"><b>'+esc(item.title)+'</b><small>'+esc(skill)+' · '+esc(({daily:'Ежедневный',weekly:'Недельный',boss:'Boss Challenge',personal:'Личный'})[item.period]||'Квест')+' · '+esc(date)+(requirements?' · '+esc(requirements):'')+'</small></span><span class="archive-quest-actions">'+(isHidden?'<button class="btn small" type="button" data-restore-quest-archive="'+esc(item.id)+'">Восстановить</button>':'<button class="btn small" type="button" data-repeat-quest="'+esc(item.id)+'"'+(SK[item.skill]?'':' disabled')+'>Повторить</button><button class="btn small" type="button" data-hide-quest-archive="'+esc(item.id)+'">Скрыть</button>')+'<button class="btn small danger" type="button" data-delete-quest-archive="'+esc(item.id)+'">Удалить навсегда</button></span></article>';}).join('')+(page.remaining?'<button type="button" class="btn small archive-load-more" data-more-quest-archive><span>Показать ещё записи</span> · '+num(page.remaining)+'</button>':''):(store.mode==='db'&&!store.historyComplete?'<p class="archive-empty">Загружаю историю заданий…</p>':'<p class="archive-empty">Завершённых квестов пока нет. Пройденные задания появятся здесь.</p>');
 }
 $('#questArchiveSearch').addEventListener('input',()=>{questArchiveLimit=ARCHIVE_PAGE_SIZE;renderQuestArchive();});
 $('#questArchivePeriod').addEventListener('change',()=>{questArchiveLimit=ARCHIVE_PAGE_SIZE;renderQuestArchive();});
@@ -1946,7 +1926,7 @@ $('#mikaVersionOptions').addEventListener('click',async e=>{
   const version=button.dataset.mikaVersion;
   if(version!=='old'&&version!=='new')return;
   if(version===currentMikaVersion())return;
-  try{await store.saveProfile({mikaVersion:version});store.profile=Object.assign({},store.profile,{mikaVersion:version});applyMikaArt();renderProfile();toast(version==='old'?'Старая версия Мики выбрана.':'Новая версия Мики выбрана.');}
+  try{await store.saveProfile({mikaVersion:version});store.profile=Object.assign({},store.profile,{mikaVersion:version});applyMikaArt();renderProfile();toast(window.AiryUiLocale?.t?.(version==='old'?'Стандартная версия Мики выбрана.':'Новая версия Мики выбрана.')||(version==='old'?'Стандартная версия Мики выбрана.':'Новая версия Мики выбрана.'));}
   catch(error){toast('Не удалось сохранить версию Мики. Попробуй ещё раз.');}
 });
 
@@ -1960,6 +1940,7 @@ $('#mikaVersionOptions').addEventListener('click',async e=>{
   await initStore();
   mikaProfileReady=true;
   renderAll();
+  updateServerRuntimeStatus();
   const tab=(location.hash||'').replace('#','');
   show(['novel','tree','journal','ach','archive'].indexOf(tab)>=0?tab:'novel',true);
   scene.instant=true;
