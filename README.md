@@ -1,22 +1,48 @@
 # Upskill Airy
 
-Личный дневник навыков с Микой: дерево целей, практика, опыт, серии активности и достижения. Интерфейс работает на компьютере и мобильных устройствах; прогресс можно хранить локально или синхронизировать через аккаунт Firebase.
+A personal skills journal that turns learning into a steady, visible habit. Set goals, keep a practice log, build activity streaks, and review progress with Mika, the in-app learning companion.
 
-## Локальный запуск
+<p align="center">
+  <a href="https://airi-upskill.vercel.app"><img src="public/icons/airy-192.png" alt="Upskill Airy icon" width="104" /></a>
+</p>
 
-Требуется Node.js, совместимый с версией проекта. Установи зависимости и запусти Next.js:
+<p align="center"><a href="https://airi-upskill.vercel.app">Open the live app</a></p>
+
+## Product preview
+
+<p align="center">
+  <img src="public/images/airy/mika-hero.webp" alt="Mika, the Upskill Airy learning companion" width="680" />
+</p>
+
+## Highlights
+
+- Visual goal tree for organizing skills and milestones
+- Practice history, progress streaks, and achievements
+- Mika learning companion and daily recommendations
+- Responsive interface for desktop and mobile
+- Local progress storage with optional Firebase account sync
+
+## Built with
+
+Next.js · React · Firebase · JavaScript
+
+## Run locally
+
+Use a Node.js version compatible with the project, then run:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Открой `http://localhost:3000`. Основной игровой интерфейс также доступен напрямую по `/upskill.html`. Для Firebase и чата Мики настрой переменные окружения по инструкции в [FIREBASE_SETUP.md](./FIREBASE_SETUP.md). Не публикуй `.env.local` и секреты API.
+Open `http://localhost:3000`. The main learning interface is also available at `/upskill.html`.
 
-## Иконки и установка
+## Firebase setup
 
-Приложение предоставляет favicon, Apple touch icon и веб-манифест для добавления на главный экран.
+Firebase account sync and the Mika chat require environment configuration. Follow [`FIREBASE_SETUP.md`](./FIREBASE_SETUP.md) and keep `.env.local` out of Git. Firebase web config values are client identifiers; secure data access with Firebase Authentication and Firestore rules. Never commit service-account credentials or private keys.
 
 ## Production
 
-Production-сборка: `npm run build`. Проект настроен для развертывания на Vercel.
+Create a production build with `npm run build`. The project is configured for deployment on Vercel.
+
+Live app: https://airi-upskill.vercel.app
